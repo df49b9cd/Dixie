@@ -16,7 +16,7 @@
     "clean": "rimraf dist",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "test": "vitest run"
+    "test": "npm run build && vitest run"
   },
   "peerDependencies": {
     "prettier": "^3.0.0"

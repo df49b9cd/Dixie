@@ -1,157 +1,199 @@
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { Worker } from "node:worker_threads";
 import packageJson from "../package.json";
+import { encodeMessage, parseEnvelopes } from "./ipc";
 
-const PROTOCOL_VERSION = 1;
 const CLIENT_VERSION = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
-
-const envelopeSchema = z.object({
-  version: z.number(),
-  type: z.union([z.literal("response"), z.literal("notification")]),
-  requestId: z.string().optional(),
-  command: z.string(),
-  payload: z.unknown()
-});
-
-const initializePayloadSchema = z.object({
-  ok: z.boolean(),
-  hostVersion: z.string().optional(),
-  roslynLanguageVersion: z.string().optional(),
-  capabilities: z
-    .object({
-      supportsRangeFormatting: z.boolean().optional(),
-      supportsDiagnostics: z.boolean().optional(),
-      supportsTelemetry: z.boolean().optional()
-    })
-    .optional(),
-  reason: z.string().optional()
-});
-
-const formatPayloadSchema = z.object({
-  ok: z.boolean(),
-  formatted: z.string().optional(),
-  diagnostics: z.array(z.unknown()).optional(),
-  metrics: z.record(z.string(), z.unknown()).optional(),
-  errorCode: z.string().optional(),
-  message: z.string().optional(),
-  details: z.unknown().optional()
-});
-
-const errorNotificationSchema = z.object({
-  severity: z.enum(["fatal", "recoverable"]).optional(),
-  errorCode: z.string().optional(),
-  message: z.string(),
-  details: z.unknown().optional()
-});
+const DEFAULT_HANDSHAKE_TIMEOUT_MS = getNumberEnv("NIKA_HANDSHAKE_TIMEOUT_MS", 5_000);
+const DEFAULT_REQUEST_TIMEOUT_MS = getNumberEnv("NIKA_REQUEST_TIMEOUT_MS", 8_000);
+const DEFAULT_RESTART_ATTEMPTS = getNumberEnv("NIKA_HOST_RETRIES", 2);
+const MIN_RESPONSE_CAPACITY = 64 * 1024;
 
 type HostLaunchSpec = {
   command: string;
   args: string[];
 };
 
-type MessageEnvelope = z.infer<typeof envelopeSchema>;
+type WorkerMessage =
+  | {
+      type: "format";
+      id: string;
+      source: string;
+      sharedBuffer: SharedArrayBuffer;
+    }
+  | {
+      type: "shutdown";
+    };
+
+type SharedStateView = {
+  state: Int32Array;
+  payload: Uint8Array;
+};
+
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40
+};
+
+const CURRENT_LOG_LEVEL = normalizeLogLevel(process.env.NIKA_LOG_LEVEL ?? "warn");
+
 export class HostClient {
   private launchSpec: HostLaunchSpec | null;
-  private readonly sessionId = randomUUID();
+  private worker: Worker | null = null;
   private warned = false;
+  private readonly handshakeTimeoutMs = DEFAULT_HANDSHAKE_TIMEOUT_MS;
+  private readonly requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+  private readonly restartAttempts = Math.max(1, DEFAULT_RESTART_ATTEMPTS);
 
   constructor(launchSpec?: HostLaunchSpec) {
     this.launchSpec = launchSpec ?? null;
   }
 
   format(source: string): string {
-    let spec: HostLaunchSpec;
-
     try {
-      spec = this.resolveLaunchSpec();
+      let attempt = 0;
+      let lastError: unknown;
+
+      while (attempt < this.restartAttempts) {
+        try {
+          return this.sendFormatRequest(source);
+        } catch (error) {
+          lastError = error;
+          attempt += 1;
+          log(
+            "warn",
+            `[nika] Host format attempt ${attempt}/${this.restartAttempts} failed: ${formatError(error)}`
+          );
+          this.disposeWorker();
+        }
+      }
+
+      throw lastError instanceof Error ? lastError : new Error(String(lastError));
     } catch (error) {
       return this.handleFailure(source, error);
     }
+  }
 
-    const initializeRequest = createRequest("initialize", {
-      clientVersion: CLIENT_VERSION,
-      hostBinaryVersion: CLIENT_VERSION,
-      platform: `${process.platform}-${process.arch}`,
-      options: {
-        roslynLanguageVersion: "preview",
-        msbuildSdksPath: null as string | null
+  private sendFormatRequest(source: string): string {
+    const worker = this.ensureWorker();
+    const responseCapacity = computeResponseCapacity(source);
+    const sharedBuffer = new SharedArrayBuffer(8 + responseCapacity);
+    const view = createSharedView(sharedBuffer);
+    const requestId = randomUUID();
+
+    view.state[0] = 0; // status
+    view.state[1] = 0; // length
+
+    const message: WorkerMessage = {
+      type: "format",
+      id: requestId,
+      source,
+      sharedBuffer
+    };
+
+    worker.postMessage(message);
+
+    const overallTimeout = this.requestTimeoutMs + this.handshakeTimeoutMs + 1_000;
+    const status = Atomics.wait(view.state, 0, 0, overallTimeout);
+
+    if (status === "timed-out") {
+      throw new Error(`Host request timed out after ${overallTimeout}ms.`);
+    }
+
+    const finalStatus = Atomics.load(view.state, 0);
+    const length = Atomics.load(view.state, 1);
+
+    if (length <= 0) {
+      throw new Error("Host worker returned an empty response.");
+    }
+
+    const json = new TextDecoder().decode(view.payload.subarray(0, length));
+    const payload = JSON.parse(json) as WorkerResponse;
+
+    if (finalStatus === 1 && payload.status === "ok") {
+      const formatted = typeof payload.formatted === "string" ? payload.formatted : source;
+      const diagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics : [];
+
+      if (diagnostics.length > 0) {
+        for (const diagnostic of diagnostics) {
+          if (diagnostic && typeof diagnostic === "object") {
+            const severity = typeof (diagnostic as { severity?: string }).severity === "string"
+              ? (diagnostic as { severity?: string }).severity
+              : "info";
+            const message = typeof (diagnostic as { message?: string }).message === "string"
+              ? (diagnostic as { message?: string }).message
+              : "Host emitted diagnostic.";
+            log("warn", `[nika host][${severity}] ${message}`);
+          }
+        }
+      }
+
+      return formatted;
+    }
+
+    if (payload.status === "error") {
+      throw new Error(payload.message ?? "Host request failed.");
+    }
+
+    throw new Error("Host worker returned an unexpected response.");
+  }
+
+  private ensureWorker(): Worker {
+    if (this.worker) {
+      return this.worker;
+    }
+
+    const spec = this.resolveLaunchSpec();
+    const workerPath = findWorkerScript();
+
+    const worker = new Worker(workerPath, {
+      workerData: {
+        spec,
+        clientVersion: CLIENT_VERSION,
+        handshakeTimeoutMs: this.handshakeTimeoutMs,
+        requestTimeoutMs: this.requestTimeoutMs,
+        restartAttempts: this.restartAttempts,
+        logLevel: process.env.NIKA_LOG_LEVEL ?? "warn"
       }
     });
 
-    const formatRequest = createRequest("format", {
-      filePath: null as string | null,
-      content: source,
-      range: null as { start: number; end: number } | null,
-      options: defaultFormattingOptions(),
-      sessionId: this.sessionId,
-      traceToken: randomUUID()
+    worker.once("error", (error) => {
+      log("error", `[nika] Host worker error: ${formatError(error)}`);
+      this.disposeWorker();
     });
 
-    const shutdownRequest = createRequest("shutdown", {
-      reason: "request-complete"
+    worker.once("exit", (code) => {
+      log("debug", `[nika] Host worker exited with code ${code}`);
+      this.worker = null;
     });
 
-    const input = [
-      encodeMessage(initializeRequest),
-      encodeMessage(formatRequest),
-      encodeMessage(shutdownRequest)
-    ].join("");
+    this.worker = worker;
+    return worker;
+  }
 
-    let result: SpawnSyncReturns<string>;
+  private disposeWorker(): void {
+    if (!this.worker) {
+      return;
+    }
 
     try {
-      result = spawnSync(spec.command, spec.args, {
-        input,
-        encoding: "utf8",
-        maxBuffer: 10 * 1024 * 1024
-      });
+      const shutdownMessage: WorkerMessage = { type: "shutdown" };
+      this.worker.postMessage(shutdownMessage);
     } catch (error) {
-      return this.handleFailure(source, error);
+      log("debug", `[nika] Failed to send shutdown message to worker: ${formatError(error)}`);
     }
 
-    if (result.error) {
-      return this.handleFailure(source, result.error);
-    }
+    this.worker.terminate().catch((error) => {
+      log("debug", `[nika] Failed to terminate worker: ${formatError(error)}`);
+    });
 
-    if (result.status !== null && result.status !== 0) {
-      const message = `Host exited with code ${result.status}${result.signal ? ` (signal ${result.signal})` : ""}.`;
-      return this.handleFailure(source, new Error(message));
-    }
-
-    if (typeof result.stdout !== "string") {
-      return this.handleFailure(source, new Error("Host produced no output."));
-    }
-
-    try {
-      const envelopes = parseEnvelopes(result.stdout);
-      this.validateInitializeResponse(envelopes, initializeRequest.requestId);
-      this.inspectNotifications(envelopes);
-
-      const formatResponse = envelopes.find(
-        (message) =>
-          message.type === "response" &&
-          message.command === "format" &&
-          message.requestId === formatRequest.requestId
-      );
-
-      if (!formatResponse) {
-        throw new Error("Host did not return a format response.");
-      }
-
-      const payload = formatPayloadSchema.parse(formatResponse.payload);
-
-      if (!payload.ok) {
-        const label = payload.errorCode ? `${payload.errorCode}: ` : "";
-        throw new Error(`${label}${payload.message ?? "Formatting failed."}`);
-      }
-
-      return typeof payload.formatted === "string" ? payload.formatted : source;
-    } catch (error) {
-      return this.handleFailure(source, error);
-    }
+    this.worker = null;
   }
 
   private resolveLaunchSpec(): HostLaunchSpec {
@@ -163,58 +205,13 @@ export class HostClient {
     return this.launchSpec;
   }
 
-  private validateInitializeResponse(envelopes: MessageEnvelope[], requestId: string): void {
-    const response = envelopes.find(
-      (message) =>
-        message.type === "response" &&
-        message.command === "initialize" &&
-        message.requestId === requestId
-    );
-
-    if (!response) {
-      throw new Error("Host did not respond to initialize request.");
-    }
-
-    const payload = initializePayloadSchema.parse(response.payload);
-    if (!payload.ok) {
-      const reason = payload.reason ?? "No reason provided.";
-      throw new Error(`Host rejected initialize request. ${reason}`);
-    }
-  }
-
-  private inspectNotifications(envelopes: MessageEnvelope[]): void {
-    const errorNotifications = envelopes.filter(
-      (message) => message.type === "notification" && message.command === "error"
-    );
-
-    for (const notification of errorNotifications) {
-      const parsed = errorNotificationSchema.safeParse(notification.payload);
-      if (!parsed.success) {
-        continue;
-      }
-
-      const { severity = "recoverable", errorCode, message } = parsed.data;
-      const label = errorCode ? `${errorCode}: ` : "";
-      const composed = `[nika host] ${label}${message}`;
-
-      if (severity === "fatal") {
-        throw new Error(composed);
-      }
-
-      if (process.env.NIKA_LOG_LEVEL === "debug") {
-        console.warn(composed);
-      }
-    }
-  }
-
   private handleFailure(source: string, cause: unknown): string {
     if (process.env.NIKA_STRICT_HOST === "1") {
       throw cause instanceof Error ? cause : new Error(String(cause));
     }
 
     if (!this.warned) {
-      const message = cause instanceof Error ? cause.message : String(cause);
-      console.warn(`[nika] Falling back to original text: ${message}`);
+      log("warn", `[nika] Falling back to original text: ${formatError(cause)}`);
       this.warned = true;
     }
 
@@ -223,84 +220,46 @@ export class HostClient {
 }
 
 export const hostClient = new HostClient();
+export const _encodeMessageForTests = encodeMessage;
+export const _parseEnvelopesForTests = parseEnvelopes;
 
-function createRequest<TPayload>(command: string, payload: TPayload) {
-  return {
-    version: PROTOCOL_VERSION,
-    type: "request" as const,
-    requestId: randomUUID(),
-    command,
-    payload
-  };
+type WorkerResponse =
+  | {
+      status: "ok";
+      formatted: string;
+      diagnostics?: unknown[];
+    }
+  | {
+      status: "error";
+      message?: string;
+    };
+
+function createSharedView(sharedBuffer: SharedArrayBuffer): SharedStateView {
+  const state = new Int32Array(sharedBuffer, 0, 2);
+  const payload = new Uint8Array(sharedBuffer, 8);
+  return { state, payload };
 }
 
-function defaultFormattingOptions() {
-  return {
-    printWidth: 80,
-    tabWidth: 2,
-    useTabs: false,
-    endOfLine: "lf" as const
-  };
+function computeResponseCapacity(source: string): number {
+  const estimated = Buffer.byteLength(source, "utf8") * 2 + 4_096;
+  return Math.max(MIN_RESPONSE_CAPACITY, estimated);
 }
 
-function encodeMessage(message: {
-  version: number;
-  type: "request";
-  requestId: string;
-  command: string;
-  payload: unknown;
-}) {
-  const json = JSON.stringify(message);
-  const bytes = Buffer.byteLength(json, "utf8");
-  return `Content-Length: ${bytes}\r\n\r\n${json}`;
-}
+function findWorkerScript(): string {
+  const candidates = [
+    path.resolve(__dirname, "host-worker.js"),
+    path.resolve(__dirname, "../dist/host-worker.js")
+  ];
 
-function parseEnvelopes(output: string): MessageEnvelope[] {
-  const envelopes: MessageEnvelope[] = [];
-  let cursor = 0;
-
-  while (cursor < output.length) {
-    const headerEnd = output.indexOf("\r\n\r\n", cursor);
-    if (headerEnd === -1) {
-      break;
-    }
-
-    const headerBlock = output.slice(cursor, headerEnd);
-    const headers = headerBlock.split("\r\n");
-    const contentLengthLine = headers.find((line) =>
-      line.toLowerCase().startsWith("content-length")
-    );
-
-    if (!contentLengthLine) {
-      break;
-    }
-
-    const value = contentLengthLine.split(":")[1];
-    const length = Number.parseInt(value?.trim() ?? "", 10);
-
-    if (!Number.isFinite(length) || length < 0) {
-      break;
-    }
-
-    const bodyStart = headerEnd + 4;
-    const bodyEnd = bodyStart + length;
-
-    if (bodyEnd > output.length) {
-      break;
-    }
-
-    const body = output.slice(bodyStart, bodyEnd);
-    const envelope = envelopeSchema.parse(JSON.parse(body));
-    envelopes.push(envelope);
-
-    cursor = bodyEnd;
-
-    while (cursor < output.length && (output[cursor] === "\r" || output[cursor] === "\n")) {
-      cursor += 1;
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
     }
   }
 
-  return envelopes;
+  throw new Error(
+    "Unable to locate host worker module. Run `npm run build` to generate artifacts."
+  );
 }
 
 function resolveHostLaunchSpec(): HostLaunchSpec {
@@ -345,5 +304,46 @@ function createLaunchSpec(filePath: string): HostLaunchSpec {
   return { command: resolved, args: [] };
 }
 
-export const _encodeMessageForTests = encodeMessage;
-export const _parseEnvelopesForTests = parseEnvelopes;
+function getNumberEnv(name: string, fallback: number): number {
+  const value = process.env[name];
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeLogLevel(level: string): LogLevel {
+  if (level in LOG_LEVEL_ORDER) {
+    return level as LogLevel;
+  }
+
+  return "warn";
+}
+
+function shouldLog(level: LogLevel): boolean {
+  return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[CURRENT_LOG_LEVEL];
+}
+
+function log(level: LogLevel, message: string): void {
+  if (!shouldLog(level)) {
+    return;
+  }
+
+  if (level === "error") {
+    console.error(message);
+  } else if (level === "warn") {
+    console.warn(message);
+  } else {
+    console.log(message);
+  }
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}

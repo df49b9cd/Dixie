@@ -199,5 +199,8 @@ Content-Length: <byte-length>\r\n
 ## Testing Strategy
 
 - JSON schema validation for each command (TS `zod` definitions, C# `JsonSerializer` attributes).
+- Reference implementations:
+  - TypeScript schema (`packages/prettier-plugin-nika/src/protocol.ts`) exposes `zod` models consumed by the plugin.
+  - C# record models (`src/Nika.Host/ProtocolModels.cs`) ensure host-side handlers deserialize with full type coverage.
 - Golden request/response fixtures under `tests/protocol`.
 - Integration tests simulate timeouts, malformed payloads, and host restarts.

@@ -100,7 +100,7 @@ while (true)
         switch (command)
         {
             case "initialize":
-                HandleInitialize(stdout, utf8WithoutBom, requestId, hostVersion);
+                HandleInitialize(stdout, utf8WithoutBom, requestId, hostVersion, payload);
                 break;
 
             case "format":
@@ -224,9 +224,9 @@ static string ReadBody(Stream stream, int length, Encoding encoding)
     return encoding.GetString(buffer, 0, read);
 }
 
-static void HandleInitialize(Stream stdout, Encoding encoding, string? requestId, string hostVersion)
+static void HandleInitialize(Stream stdout, Encoding encoding, string? requestId, string hostVersion, JsonElement payload)
 {
-    var payload = new
+    var responsePayload = new
     {
         ok = true,
         hostVersion,
@@ -239,11 +239,27 @@ static void HandleInitialize(Stream stdout, Encoding encoding, string? requestId
         }
     };
 
-    SendResponse(stdout, encoding, requestId, "initialize", payload);
+    SendResponse(stdout, encoding, requestId, "initialize", responsePayload);
+
+    var clientVersion = payload.TryGetProperty("clientVersion", out var clientVersionElement)
+        ? clientVersionElement.GetString()
+        : null;
+
+    var platform = payload.TryGetProperty("platform", out var platformElement)
+        ? platformElement.GetString()
+        : null;
+
+    SendLogNotification(stdout, encoding, "info", "initialize completed", new
+    {
+        clientVersion,
+        platform,
+        hostVersion
+    });
 }
 
 static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, JsonElement payload)
 {
+    var stopwatch = Stopwatch.StartNew();
     string content = string.Empty;
     string endOfLine = "lf";
 
@@ -265,19 +281,42 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
     var normalized = NormalizeLineEndings(content, endOfLine);
     normalized = EnsureTrailingNewline(normalized);
 
+    var diagnostics = new List<object>();
+    var todoIndex = content.IndexOf("TODO", StringComparison.Ordinal);
+    if (todoIndex >= 0)
+    {
+        diagnostics.Add(new
+        {
+            severity = "warning",
+            message = "TODO comment detected.",
+            start = todoIndex,
+            end = todoIndex + 4
+        });
+    }
+
+    stopwatch.Stop();
+
     var responsePayload = new
     {
         ok = true,
         formatted = normalized,
-        diagnostics = Array.Empty<object>(),
+        diagnostics,
         metrics = new
         {
-            elapsedMs = 0,
+            elapsedMs = stopwatch.ElapsedMilliseconds,
             parseDiagnostics = 0
         }
     };
 
     SendResponse(stdout, encoding, requestId, "format", responsePayload);
+
+    SendLogNotification(stdout, encoding, "debug", "format completed", new
+    {
+        elapsedMs = stopwatch.ElapsedMilliseconds,
+        originalLength = content.Length,
+        normalizedLength = normalized.Length,
+        diagnostics = diagnostics.Count
+    });
 }
 
 static void HandlePing(Stream stdout, Encoding encoding, string? requestId, JsonElement payload, long uptimeMs)
@@ -359,6 +398,23 @@ static void SendErrorNotification(Stream stdout, Encoding encoding, string sever
             errorCode,
             message
         }
+    };
+
+    WriteMessage(stdout, encoding, envelope);
+}
+
+static void SendLogNotification(Stream stdout, Encoding encoding, string level, string message, object? context)
+{
+    object payload = context is null
+        ? new { level, message }
+        : new { level, message, context };
+
+    var envelope = new
+    {
+        version = ProtocolVersion,
+        type = "notification",
+        command = "log",
+        payload
     };
 
     WriteMessage(stdout, encoding, envelope);

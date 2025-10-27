@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { execa } from "execa";
 import path from "node:path";
 import { existsSync } from "node:fs";
@@ -46,10 +46,17 @@ describe("HostClient integration", () => {
 
   it("formats content via the Roslyn host handshake", () => {
     const client = new HostClient();
-    const source = "class Foo { }";
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+      /* suppress */
+    });
+
+    const source = "class Foo { // TODO fix }";
     const result = client.format(source);
 
     expect(result.trim()).toBe(source);
     expect(result.endsWith("\n")).toBe(true);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("TODO comment detected."));
+
+    warnSpy.mockRestore();
   }, 10_000);
 });

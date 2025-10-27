@@ -16,11 +16,11 @@
 
 **Objective:** Ship a resilient communication layer between the Prettier plugin and Roslyn host.
 
-- [ ] Define protocol schema (`initialize`, `format`, `shutdown`, `ping`, `version`) with `zod` in TS and record structs in C#.
-- [ ] Implement framed messaging over stdio with timeouts, retries, and structured logging on both sides.
-- [ ] Build `HostClient` lifecycle management (lazy spawn, health checks, shutdown hooks, concurrency queue).
-- [ ] Extend host stub to echo structured responses and surface typed diagnostics.
-- [ ] Add end-to-end integration tests that spin up the host and assert request/response semantics.
+- [x] Define protocol schema (`initialize`, `format`, `shutdown`, `ping`, `version`) with `zod` in TS and record structs in C#.
+- [x] Implement framed messaging over stdio with timeouts, retries, and structured logging on both sides.
+- [x] Build `HostClient` lifecycle management (lazy spawn, health checks, shutdown hooks, concurrency queue).
+- [x] Extend host stub to echo structured responses and surface typed diagnostics.
+- [x] Add end-to-end integration tests that spin up the host and assert request/response semantics.
 
 ## Milestone 2 — Core Roslyn Formatting (Week 4–6)
 
