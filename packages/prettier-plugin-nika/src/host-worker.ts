@@ -46,11 +46,20 @@ type WorkerMessage =
       type: "shutdown";
     };
 
+type WorkerMetrics = {
+  elapsedMs?: number;
+  parseDiagnostics?: number;
+  managedMemoryMb?: number;
+  workingSetMb?: number;
+  workingSetDeltaMb?: number;
+};
+
 type WorkerResponsePayload =
   | {
       status: "ok";
       formatted: string;
       diagnostics?: unknown[];
+      metrics?: WorkerMetrics;
     }
   | {
       status: "error";
@@ -110,7 +119,7 @@ class WorkerHostClient {
     source: string,
     options: FormattingOptions,
     range: FormatRange | null
-  ): Promise<{ formatted: string; diagnostics: unknown[] }> {
+  ): Promise<{ formatted: string; diagnostics: unknown[]; metrics?: WorkerMetrics }> {
     let attempt = 0;
     let lastError: unknown;
 
@@ -140,7 +149,8 @@ class WorkerHostClient {
 
         const formatted = typeof payload.formatted === "string" ? payload.formatted : source;
         const diagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics : [];
-        return { formatted, diagnostics };
+        const metrics = payload.metrics ?? undefined;
+        return { formatted, diagnostics, metrics };
       } catch (error) {
         lastError = error;
         attempt += 1;
@@ -520,7 +530,8 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
     writeResponse(stateView, 1, {
       status: "ok",
       formatted: result.formatted,
-      diagnostics: result.diagnostics
+      diagnostics: result.diagnostics,
+      metrics: result.metrics
     });
   } catch (error) {
     writeResponse(stateView, 2, {

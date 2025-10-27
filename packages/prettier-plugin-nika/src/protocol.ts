@@ -65,7 +65,10 @@ export const formatResponsePayloadSchema = z.object({
   metrics: z
     .object({
       elapsedMs: z.number().nonnegative().optional(),
-      parseDiagnostics: z.number().nonnegative().optional()
+      parseDiagnostics: z.number().nonnegative().optional(),
+      managedMemoryMb: z.number().nonnegative().optional(),
+      workingSetMb: z.number().nonnegative().optional(),
+      workingSetDeltaMb: z.number().nonnegative().optional()
     })
     .optional(),
   errorCode: z.string().optional(),

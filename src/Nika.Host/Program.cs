@@ -324,7 +324,40 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
     }
 
     var requestOptions = new FormattingRequestOptions(printWidth, tabWidth, useTabs, endOfLine);
-    var formatResult = FormatWithRoslyn(content, requestOptions, range, out var formattingMemoryUsageMb);
+    var workingSetBeforeMb = GetWorkingSetUsageMb();
+    var formatResult = FormatWithRoslyn(content, requestOptions, range);
+
+    var workingSetAfterMb = formatResult.WorkingSetMb;
+    var managedMemoryMb = formatResult.ManagedMemoryMb;
+    var workingSetDeltaMb = Math.Max(0, workingSetAfterMb - workingSetBeforeMb);
+    var memoryBudgetMb = GetMemoryBudgetMb();
+
+    if (workingSetAfterMb > memoryBudgetMb)
+    {
+        var message = $"Host memory usage {workingSetAfterMb:F1} MB exceeded budget {memoryBudgetMb:F1} MB.";
+        var details = new
+        {
+            managedMemoryMb = Math.Round(managedMemoryMb, 2),
+            workingSetMb = Math.Round(workingSetAfterMb, 2),
+            workingSetDeltaMb = Math.Round(workingSetDeltaMb, 2),
+            budgetMb = Math.Round(memoryBudgetMb, 2)
+        };
+
+        SendErrorResponse(stdout, encoding, requestId, "format", "MEMORY_BUDGET_EXCEEDED", message, details);
+        SendErrorNotification(stdout, encoding, "fatal", "MEMORY_BUDGET_EXCEEDED", message, details);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        var postCollectWorkingSet = GetWorkingSetUsageMb();
+        if (postCollectWorkingSet > memoryBudgetMb * 0.9)
+        {
+            Environment.Exit(86);
+        }
+
+        return;
+    }
 
     var responsePayload = new
     {
@@ -334,7 +367,10 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         metrics = new
         {
             elapsedMs = formatResult.ElapsedMilliseconds,
-            parseDiagnostics = formatResult.ParseDiagnostics
+            parseDiagnostics = formatResult.ParseDiagnostics,
+            managedMemoryMb = Math.Round(managedMemoryMb, 2),
+            workingSetMb = Math.Round(workingSetAfterMb, 2),
+            workingSetDeltaMb = Math.Round(workingSetDeltaMb, 2)
         }
     };
 
@@ -347,22 +383,14 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         normalizedLength = formatResult.FormattedText.Length,
         diagnostics = formatResult.Diagnostics.Count,
         parseDiagnostics = formatResult.ParseDiagnostics,
-        memoryMb = formattingMemoryUsageMb
+        managedMemoryMb = Math.Round(managedMemoryMb, 2),
+        workingSetMb = Math.Round(workingSetAfterMb, 2),
+        workingSetDeltaMb = Math.Round(workingSetDeltaMb, 2),
+        memoryBudgetMb = Math.Round(memoryBudgetMb, 2)
     });
-
-    var memoryBudgetMb = GetMemoryBudgetMb();
-
-    if (formattingMemoryUsageMb > memoryBudgetMb)
-    {
-        SendLogNotification(stdout, encoding, "warn", "memory budget exceeded", new
-        {
-            budgetMb = memoryBudgetMb,
-            actualMb = formattingMemoryUsageMb
-        });
-    }
 }
 
-static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options, TextSpan? range, out double memoryUsageMb)
+static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options, TextSpan? range)
 {
     var formatStopwatch = Stopwatch.StartNew();
     var diagnostics = new List<object>();
@@ -416,7 +444,8 @@ static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions op
         .ToString();
 
     formatStopwatch.Stop();
-    memoryUsageMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+    var managedMemoryMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+    var workingSetMb = GetWorkingSetUsageMb();
 
     var todoIndex = content.IndexOf("TODO", StringComparison.Ordinal);
     if (todoIndex >= 0)
@@ -432,7 +461,13 @@ static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions op
 
     var normalizedText = EnsureTrailingNewline(formattedText, newline);
 
-    return new FormatResult(normalizedText, diagnostics, formatStopwatch.ElapsedMilliseconds, parseDiagnostics);
+    return new FormatResult(
+        normalizedText,
+        diagnostics,
+        formatStopwatch.ElapsedMilliseconds,
+        parseDiagnostics,
+        managedMemoryMb,
+        workingSetMb);
 }
 
 static void HandlePing(Stream stdout, Encoding encoding, string? requestId, JsonElement payload, long uptimeMs)
@@ -482,7 +517,14 @@ static void SendResponse(Stream stdout, Encoding encoding, string? requestId, st
     WriteMessage(stdout, encoding, envelope);
 }
 
-static void SendErrorResponse(Stream stdout, Encoding encoding, string? requestId, string command, string errorCode, string message)
+static void SendErrorResponse(
+    Stream stdout,
+    Encoding encoding,
+    string? requestId,
+    string command,
+    string errorCode,
+    string message,
+    object? details = null)
 {
     var envelope = new
     {
@@ -494,14 +536,21 @@ static void SendErrorResponse(Stream stdout, Encoding encoding, string? requestI
         {
             ok = false,
             errorCode,
-            message
+            message,
+            details
         }
     };
 
     WriteMessage(stdout, encoding, envelope);
 }
 
-static void SendErrorNotification(Stream stdout, Encoding encoding, string severity, string errorCode, string message)
+static void SendErrorNotification(
+    Stream stdout,
+    Encoding encoding,
+    string severity,
+    string errorCode,
+    string message,
+    object? details = null)
 {
     var envelope = new
     {
@@ -512,7 +561,8 @@ static void SendErrorNotification(Stream stdout, Encoding encoding, string sever
         {
             severity,
             errorCode,
-            message
+            message,
+            details
         }
     };
 
@@ -545,6 +595,12 @@ static double GetMemoryBudgetMb()
     }
 
     return DefaultMemoryBudgetMb;
+}
+
+static double GetWorkingSetUsageMb()
+{
+    using var process = Process.GetCurrentProcess();
+    return process.WorkingSet64 / (1024d * 1024d);
 }
 
 static object ConvertDiagnostic(Diagnostic diagnostic)

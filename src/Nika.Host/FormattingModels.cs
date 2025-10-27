@@ -4,4 +4,10 @@ namespace Nika.Host;
 
 internal readonly record struct FormattingRequestOptions(int PrintWidth, int TabWidth, bool UseTabs, string EndOfLine);
 
-internal sealed record FormatResult(string FormattedText, List<object> Diagnostics, long ElapsedMilliseconds, int ParseDiagnostics);
+internal sealed record FormatResult(
+    string FormattedText,
+    List<object> Diagnostics,
+    long ElapsedMilliseconds,
+    int ParseDiagnostics,
+    double ManagedMemoryMb,
+    double WorkingSetMb);

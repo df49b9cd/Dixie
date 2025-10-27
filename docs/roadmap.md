@@ -40,7 +40,7 @@
 - [x] Implement range/selection formatting inputs and map them to Roslyn `TextSpan`.
 - [x] Tune formatting of LINQ queries, pattern matching, attributes, interpolated strings, and directives.
 - [x] Build regression suites comparing output to canonical style guides and `dotnet format`.
-- [ ] Profile host memory usage; add guards against runaway allocations.
+- [x] Profile host memory usage; add guards against runaway allocations.
 
 ## Milestone 4 — Tooling & Developer Experience (Week 7–9)
 
@@ -60,7 +60,7 @@
 - [x] Publish host as self-contained ReadyToRun builds for macOS (x64/arm64), Windows (x64), Linux (x64/arm64) via `npm run build:host`.
 - [ ] Automate release pipeline (GitHub Actions) to build, test, sign, and attach binaries to GitHub Releases.
 - [x] Implement plugin-side binary resolution, including checksum validation and helpful error surfaces (`scripts/postinstall.mjs`).
-- [ ] Add postinstall smoke test ensuring the bundled host launches and reports its version.
+- [x] Add postinstall smoke test ensuring the bundled host launches and reports its version.
 - [x] Document manual installation path for air-gapped environments (`README.md`, `docs/faq.md`).
 
 ## Milestone 6 — Preview Release & Feedback Loop (Week 10–12)

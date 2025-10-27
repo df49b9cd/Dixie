@@ -139,7 +139,13 @@ export class HostClient {
     if (finalStatus === 1 && payload.status === "ok") {
       const formatted = typeof payload.formatted === "string" ? payload.formatted : source;
       const diagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics : [];
-      const elapsedMs = typeof payload.metrics?.elapsedMs === "number" ? payload.metrics.elapsedMs : null;
+      const metrics = payload.metrics ?? {};
+      const elapsedMs = typeof metrics.elapsedMs === "number" ? metrics.elapsedMs : null;
+      const managedMemoryMb =
+        typeof metrics.managedMemoryMb === "number" ? metrics.managedMemoryMb : null;
+      const workingSetMb = typeof metrics.workingSetMb === "number" ? metrics.workingSetMb : null;
+      const workingSetDeltaMb =
+        typeof metrics.workingSetDeltaMb === "number" ? metrics.workingSetDeltaMb : null;
 
       recordTelemetry({
         success: true,
@@ -147,7 +153,10 @@ export class HostClient {
         diagnostics: diagnostics.length,
         options: formatting,
         range: range ?? null,
-        error: null
+        error: null,
+        managedMemoryMb,
+        workingSetMb,
+        workingSetDeltaMb
       });
 
       if (diagnostics.length > 0) {
@@ -174,7 +183,10 @@ export class HostClient {
         diagnostics: undefined,
         error: payload.message ?? "Host request failed.",
         options: formatting,
-        range: range ?? null
+        range: range ?? null,
+        managedMemoryMb: null,
+        workingSetMb: null,
+        workingSetDeltaMb: null
       });
       throw new Error(payload.message ?? "Host request failed.");
     }
@@ -265,6 +277,9 @@ type WorkerResponse =
       metrics?: {
         elapsedMs?: number;
         parseDiagnostics?: number;
+        managedMemoryMb?: number;
+        workingSetMb?: number;
+        workingSetDeltaMb?: number;
       };
     }
   | {
@@ -393,6 +408,9 @@ type TelemetryPayload = {
   error: string | null;
   options: FormattingOptions;
   range: FormatRange | null;
+  managedMemoryMb: number | null;
+  workingSetMb: number | null;
+  workingSetDeltaMb: number | null;
 };
 
 function recordTelemetry(payload: TelemetryPayload): void {
@@ -408,7 +426,10 @@ function recordTelemetry(payload: TelemetryPayload): void {
     diagnostics: payload.diagnostics,
     error: payload.error,
     options: payload.options,
-    range: payload.range ?? undefined
+    range: payload.range ?? undefined,
+    managedMemoryMb: payload.managedMemoryMb,
+    workingSetMb: payload.workingSetMb,
+    workingSetDeltaMb: payload.workingSetDeltaMb
   };
 
   try {
