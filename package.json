@@ -14,13 +14,21 @@
   },
   "scripts": {
     "build": "npm run build --workspaces",
+    "format": "npm run format --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "prepare": "husky install"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "typescript": "^5.4.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,cs}": "prettier --write",
+    "packages/prettier-plugin-nika/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-nika -- --max-warnings=0"
   }
 }

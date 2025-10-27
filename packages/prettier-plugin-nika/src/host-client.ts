@@ -6,8 +6,7 @@ import { z } from "zod";
 import packageJson from "../package.json";
 
 const PROTOCOL_VERSION = 1;
-const CLIENT_VERSION =
-  typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+const CLIENT_VERSION = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
 
 const envelopeSchema = z.object({
   version: z.number(),
@@ -164,10 +163,7 @@ export class HostClient {
     return this.launchSpec;
   }
 
-  private validateInitializeResponse(
-    envelopes: MessageEnvelope[],
-    requestId: string
-  ): void {
+  private validateInitializeResponse(envelopes: MessageEnvelope[], requestId: string): void {
     const response = envelopes.find(
       (message) =>
         message.type === "response" &&
@@ -294,15 +290,12 @@ function parseEnvelopes(output: string): MessageEnvelope[] {
     }
 
     const body = output.slice(bodyStart, bodyEnd);
-    const envelope = JSON.parse(body);
-    envelopes.push(envelopeSchema.parse(envelope));
+    const envelope = envelopeSchema.parse(JSON.parse(body));
+    envelopes.push(envelope);
 
     cursor = bodyEnd;
 
-    while (
-      cursor < output.length &&
-      (output[cursor] === "\r" || output[cursor] === "\n")
-    ) {
+    while (cursor < output.length && (output[cursor] === "\r" || output[cursor] === "\n")) {
       cursor += 1;
     }
   }
@@ -324,14 +317,7 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
 
   for (const configuration of configurations) {
     for (const framework of frameworks) {
-      const directory = path.join(
-        repoRoot,
-        "src",
-        "Nika.Host",
-        "bin",
-        configuration,
-        framework
-      );
+      const directory = path.join(repoRoot, "src", "Nika.Host", "bin", configuration, framework);
 
       for (const binary of binaries) {
         const candidate = path.join(directory, binary);
@@ -342,9 +328,7 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
     }
   }
 
-  throw new Error(
-    "Unable to locate Nika host binary. Set NIKA_HOST_PATH to override detection."
-  );
+  throw new Error("Unable to locate Nika host binary. Set NIKA_HOST_PATH to override detection.");
 }
 
 function createLaunchSpec(filePath: string): HostLaunchSpec {
@@ -360,3 +344,6 @@ function createLaunchSpec(filePath: string): HostLaunchSpec {
 
   return { command: resolved, args: [] };
 }
+
+export const _encodeMessageForTests = encodeMessage;
+export const _parseEnvelopesForTests = parseEnvelopes;

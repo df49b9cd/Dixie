@@ -7,10 +7,10 @@
 **Objective:** Establish a reproducible workspace and baseline automation.
 
 - [x] Lock package manager (npm workspaces) and Node runtime (>=22.21.0).
-- [ ] Configure linting (`eslint`), formatting (`prettier`), and testing (`vitest`) for the plugin.
-- [ ] Introduce commit tooling (editorconfig, husky/lint-staged) to guard code quality.
-- [ ] Stand up GitHub Actions CI covering `npm run build`, `npm run lint`, `npm run test`, and `dotnet build`.
-- [ ] Capture contributor guidelines (coding standards, branching model) in `CONTRIBUTING.md`.
+- [x] Configure linting (`eslint`), formatting (`prettier`), and testing (`vitest`) for the plugin.
+- [x] Introduce commit tooling (editorconfig, husky/lint-staged) to guard code quality.
+- [x] Stand up GitHub Actions CI covering `npm run build`, `npm run lint`, `npm run test`, and `dotnet build`.
+- [x] Capture contributor guidelines (coding standards, branching model) in `CONTRIBUTING.md`.
 
 ## Milestone 1 — IPC Infrastructure (Week 2–4)
 
