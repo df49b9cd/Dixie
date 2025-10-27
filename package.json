@@ -18,12 +18,14 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "prepare": "husky",
-    "demo": "npm run demo --workspace prettier-plugin-nika"
+    "demo": "npm run demo --workspace prettier-plugin-nika",
+    "build:host": "node scripts/build-host.mjs"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "execa": "^9.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "typescript": "^5.4.0"

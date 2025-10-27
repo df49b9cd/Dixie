@@ -9,6 +9,8 @@ Additional docs:
 - `docs/development.md` – day-to-day workflows, telemetry, and VS Code setup.
 - `docs/troubleshooting.md` – common failure modes and mitigations.
 - `docs/faq.md` – language feature coverage and debugging tips.
+- `docs/packaging-strategy.md` – plan for shipping host binaries via npm.
+- `docs/release.md` – release checklist for npm/GitHub packages.
 
 ## Packages
 

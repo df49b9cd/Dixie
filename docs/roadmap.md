@@ -51,6 +51,7 @@
 - [x] Produce developer docs: architecture, protocol reference, troubleshooting, FAQ.
 - [x] Add telemetry hooks (optional) or structured logs to aid issue triage while respecting privacy.
 - [x] Prepare VS Code launch configs/tasks for debugging the host and plugin concurrently.
+- [x] Document packaging/release process (`docs/packaging-strategy.md`, `docs/release.md`).
 
 ## Milestone 5 — Packaging & Distribution (Week 8–10)
 
