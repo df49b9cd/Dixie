@@ -1,0 +1,26 @@
+{
+  "name": "nika",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Prettier plugin for C# backed by a Roslyn host",
+  "author": "Project Nika contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/nika.git"
+  },
+  "engines": {
+    "node": ">=22.21.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
