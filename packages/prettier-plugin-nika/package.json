@@ -17,7 +17,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "npm run build && vitest run",
-    "demo": "npm run build && node ./scripts/demo.mjs"
+    "demo": "npm run build && node ./scripts/demo.mjs",
+    "postinstall": "node ./scripts/postinstall.mjs"
   },
   "peerDependencies": {
     "prettier": "^3.0.0"

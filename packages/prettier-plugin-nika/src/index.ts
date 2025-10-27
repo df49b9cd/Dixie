@@ -52,10 +52,13 @@ const plugin: Plugin<NikaAst> = {
 export default plugin;
 
 // Support CommonJS consumers (Prettier CLI `--plugin dist/index.js`).
-declare const module: NodeModule | undefined;
+declare const module: { exports: unknown } | undefined;
 if (typeof module !== "undefined") {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-  (module as any).exports = plugin;
+  try {
+    module.exports = plugin;
+  } catch {
+    // Ignore when running in pure ESM environments (e.g., vitest).
+  }
 }
 
 function resolveFormattingOptions(options: Parameters<Printer<NikaAst>["print"]>[1]): FormattingOptions {

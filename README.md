@@ -23,6 +23,7 @@ Additional docs:
 2. Install dependencies with npm: `npm install`.
 3. Build the plugin: `npm run build --workspace prettier-plugin-nika`.
 4. Restore the .NET host: `dotnet restore src/Nika.Host`.
-5. Run the demo formatter over the sample corpus: `npm run demo`.
+5. (Optional) Produce self-contained host binaries for packaging: `npm run build:host`.
+6. Run the demo formatter over the sample corpus: `npm run demo`.
 
 See `docs/architecture.md` for detailed plans and next steps.

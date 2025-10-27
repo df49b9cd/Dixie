@@ -19,5 +19,7 @@ Yes. Use the VS Code launch configurations under `.vscode/launch.json` to run Vi
 - Snapshot tests keep the formatted output guarded in CI (`fixtures.test.ts`).
 
 ## How do I report log output from the host?
+- Set `NIKA_LOG_LEVEL=debug`. The host emits structured notifications (`log` command) that include context objects—these appear in the plugin when running Vitest or Prettier CLI.
+- Host binaries are verified during installation. Set `NIKA_HOST_CACHE` to control where downloaded binaries live, or `NIKA_HOST_PATH` to override the binary completely (useful for custom builds).
 
 Set `NIKA_LOG_LEVEL=debug`. The host emits structured notifications (`log` command) that include context objects—these appear in the plugin when running Vitest or Prettier CLI.

@@ -5,6 +5,7 @@
 - Ensure the host has been built: `dotnet build src/Nika.Host`.
 - If the plugin cannot locate the binary, set `NIKA_HOST_PATH` to the exact executable.
 - On macOS and Linux, confirm the host binary has execute permissions (`chmod +x`).
+- If `npm install` errors during postinstall checksum validation, run `npm run build:host` locally and commit the refreshed `manifest.json` before publishing.
 
 ## Formatting falls back to original text
 
@@ -21,6 +22,7 @@
 
 - The Roslyn host emits a warning when private memory exceeds `NIKA_HOST_MEMORY_BUDGET_MB` (default 512 MB).
 - Lower the concurrency by letting the worker restart between large requests, or reduce the budget via the environment variable to surface issues sooner.
+- If the postinstall cache grows too large, clear `${NIKA_HOST_CACHE:-~/.cache/nika}` to force a re-download.
 
 ## Tests hang when running from VS Code
 

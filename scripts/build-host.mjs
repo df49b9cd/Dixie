@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { mkdirSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { mkdirSync, existsSync, readdirSync, readFileSync, statSync, copyFileSync, writeFileSync, chmodSync } from "node:fs";
+import { join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = resolve(__dirname, "..");
+const pluginRoot = resolve(projectRoot, "packages/prettier-plugin-nika");
 const hostProject = resolve(projectRoot, "src/Nika.Host/Nika.Host.csproj");
 
 const targets = [
@@ -17,6 +19,7 @@ const targets = [
 ];
 
 async function main() {
+  const manifest = { version: getPluginVersion(), binaries: {} };
   for (const target of targets) {
     const outDir = resolve(projectRoot, target.output);
     if (!existsSync(outDir)) {
@@ -43,9 +46,51 @@ async function main() {
       ],
       { stdio: "inherit", cwd: projectRoot }
     );
+    const binaryPath = locateBinary(outDir);
+    const stats = statSync(binaryPath);
+    const sha = checksum(binaryPath);
+
+    const binDir = resolve(pluginRoot, "bin", target.rid);
+    mkdirSync(binDir, { recursive: true });
+    const destName = process.platform === "win32" && target.rid.startsWith("win") ? "nika-host.exe" : "nika-host";
+    const destPath = join(binDir, destName);
+    copyFileSync(binaryPath, destPath);
+    if (!target.rid.startsWith("win")) {
+      chmodSync(destPath, 0o755);
+    }
+
+    const manifestPath = relative(pluginRoot, destPath).replace(/\\/g, "/");
+    manifest.binaries[target.rid] = {
+      path: manifestPath,
+      sha256: sha,
+      size: stats.size
+    };
   }
 
-  console.log("Host artifacts ready under ./artifacts");
+  const manifestFile = join(pluginRoot, "manifest.json");
+  writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n");
+
+  console.log("Host artifacts ready under ./artifacts and bin/. Manifest updated.");
+}
+
+function getPluginVersion() {
+  const pkg = JSON.parse(readFileSync(join(pluginRoot, "package.json"), "utf8"));
+  return pkg.version;
+}
+
+function locateBinary(directory) {
+  const files = readdirSync(directory);
+  const candidate = files.find((file) => file === "Nika.Host" || file === "Nika.Host.exe");
+  if (!candidate) {
+    throw new Error(`Could not locate host binary in ${directory}`);
+  }
+  return join(directory, candidate);
+}
+
+function checksum(filePath) {
+  const hash = createHash("sha256");
+  hash.update(readFileSync(filePath));
+  return hash.digest("hex");
 }
 
 main().catch((error) => {

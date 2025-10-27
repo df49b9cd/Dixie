@@ -7,7 +7,7 @@
 
 ## Steps
 
-1. Run `npm run build:host` to produce self-contained binaries.
+1. Run `npm run build:host` to produce self-contained binaries and refresh `manifest.json`.
 2. Update `manifest.json` (coming milestone) with new SHA-256 values.
 3. Bump version numbers in `package.json` and `packages/prettier-plugin-nika/package.json` (use `npm version`).
 4. Commit and tag: `git commit -am "chore(release): vX.Y.Z" && git tag vX.Y.Z`.

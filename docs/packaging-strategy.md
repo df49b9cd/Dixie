@@ -59,7 +59,7 @@ The postinstall script loads the manifest and verifies the on-disk binary matche
 
 ## Next Tasks
 
-- [ ] Script `dotnet publish` wrappers for each RID.
-- [ ] Implement `postinstall` script that verifies/downloads binaries.
+- [x] Script `dotnet publish` wrappers for each RID (`npm run build:host`).
+- [x] Implement `postinstall` script that verifies/downloads binaries (`scripts/postinstall.mjs`).
 - [ ] Generate `manifest.json` in CI with checksums.
 - [ ] Extend README with installation instructions and binary override env vars.
