@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "npm run build && vitest run",
-    "demo": "npm run build && prettier --config ../../.prettierrc.json --plugin dist/index.js --parser nika-csharp \"fixtures/**/*.cs\""
+    "demo": "npm run build && node ./scripts/demo.mjs"
   },
   "peerDependencies": {
     "prettier": "^3.0.0"

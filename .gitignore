@@ -1,6 +1,7 @@
 node_modules/
 dist/
 packages/**/dist/
+packages/prettier-plugin-nika/demo-output/
 yarn.lock
 *.user
 *.swp

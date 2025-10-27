@@ -51,6 +51,13 @@ const plugin: Plugin<NikaAst> = {
 
 export default plugin;
 
+// Support CommonJS consumers (Prettier CLI `--plugin dist/index.js`).
+declare const module: NodeModule | undefined;
+if (typeof module !== "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+  (module as any).exports = plugin;
+}
+
 function resolveFormattingOptions(options: Parameters<Printer<NikaAst>["print"]>[1]): FormattingOptions {
   const printWidth = typeof options.printWidth === "number" && Number.isFinite(options.printWidth)
     ? Math.max(40, Math.trunc(options.printWidth))
