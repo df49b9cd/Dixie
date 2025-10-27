@@ -64,4 +64,52 @@ describe("HostClient integration", () => {
 
     warnSpy.mockRestore();
   }, 10_000);
+
+  it("formats only the requested range", () => {
+    const client = new HostClient();
+    const source = `class Foo
+{
+    void A()
+    {
+        System.Console.WriteLine("A");
+    }
+
+    void B(   )   {
+System.Console.WriteLine("B");
+    }
+}`;
+
+    const rangeStart = source.indexOf("    void B");
+    const rangeEndIndex = source.indexOf("}\n}", rangeStart);
+    const rangeEnd = rangeEndIndex > rangeStart ? rangeEndIndex + 1 : source.length;
+
+    const result = client.format(
+      source,
+      {
+        printWidth: 80,
+        tabWidth: 4,
+        useTabs: false,
+        endOfLine: "lf"
+      },
+      {
+        start: rangeStart,
+        end: rangeEnd
+      }
+    );
+
+    const expected = `class Foo
+{
+    void A()
+    {
+        System.Console.WriteLine("A");
+    }
+
+    void B()
+    {
+        System.Console.WriteLine("B");
+    }
+}`;
+
+    expect(result.trim()).toBe(expected);
+  }, 10_000);
 });

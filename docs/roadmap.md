@@ -36,10 +36,10 @@
 
 **Objective:** Handle modern C# syntax and editor-driven scenarios.
 
-- [ ] Support C# 12 constructs (raw strings, primary constructors, collection expressions, `required`).
-- [ ] Implement range/selection formatting inputs and map them to Roslyn `TextSpan`.
-- [ ] Tune formatting of LINQ queries, pattern matching, attributes, interpolated strings, and directives.
-- [ ] Build regression suites comparing output to canonical style guides and `dotnet format`.
+- [x] Support C# 12 constructs (raw strings, primary constructors, collection expressions, `required`).
+- [x] Implement range/selection formatting inputs and map them to Roslyn `TextSpan`.
+- [x] Tune formatting of LINQ queries, pattern matching, attributes, interpolated strings, and directives.
+- [x] Build regression suites comparing output to canonical style guides and `dotnet format`.
 - [ ] Profile host memory usage; add guards against runaway allocations.
 
 ## Milestone 4 — Tooling & Developer Experience (Week 7–9)

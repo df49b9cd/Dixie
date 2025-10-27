@@ -28,6 +28,11 @@ type WorkerData = {
   logLevel: string;
 };
 
+type FormatRange = {
+  start: number;
+  end: number;
+};
+
 type WorkerMessage =
   | {
       type: "format";
@@ -35,6 +40,7 @@ type WorkerMessage =
       source: string;
       sharedBuffer: SharedArrayBuffer;
       options: FormattingOptions;
+      range: FormatRange | null;
     }
   | {
       type: "shutdown";
@@ -102,7 +108,8 @@ class WorkerHostClient {
 
   async format(
     source: string,
-    options: FormattingOptions
+    options: FormattingOptions,
+    range: FormatRange | null
   ): Promise<{ formatted: string; diagnostics: unknown[] }> {
     let attempt = 0;
     let lastError: unknown;
@@ -111,11 +118,12 @@ class WorkerHostClient {
       try {
         const host = await this.ensureHost();
         const normalizedOptions = normalizeFormattingOptions(options);
+        const normalizedRange = normalizeRange(range, source.length);
 
         const formatPayload = formatRequestPayloadSchema.parse({
           filePath: null as string | null,
           content: source,
-          range: null as { start: number; end: number } | null,
+          range: normalizedRange,
           options: normalizedOptions,
           sessionId: this.sessionId,
           traceToken: randomUUID()
@@ -504,11 +512,11 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
     return;
   }
 
-  const { source, options, sharedBuffer } = message;
+  const { source, options, sharedBuffer, range } = message;
   const stateView = createSharedView(sharedBuffer);
 
   try {
-    const result = await hostClient.format(source, options);
+    const result = await hostClient.format(source, options, range);
     writeResponse(stateView, 1, {
       status: "ok",
       formatted: result.formatted,
@@ -558,10 +566,25 @@ function writeResponse(
 function normalizeFormattingOptions(options: FormattingOptions) {
   return {
     printWidth: Number.isFinite(options.printWidth) ? Math.max(40, Math.trunc(options.printWidth)) : 80,
-    tabWidth: Number.isFinite(options.tabWidth) ? Math.max(1, Math.trunc(options.tabWidth)) : 2,
+    tabWidth: Number.isFinite(options.tabWidth) ? Math.max(1, Math.trunc(options.tabWidth)) : 4,
     useTabs: options.useTabs ?? false,
     endOfLine: options.endOfLine === "crlf" ? "crlf" : "lf"
   } as const;
+}
+
+function normalizeRange(range: FormatRange | null, sourceLength: number): FormatRange | null {
+  if (!range) {
+    return null;
+  }
+
+  const start = Math.max(0, Math.trunc(range.start));
+  const end = Math.min(sourceLength, Math.max(start, Math.trunc(range.end)));
+
+  if (end <= start || start === 0 && end >= sourceLength) {
+    return null;
+  }
+
+  return { start, end };
 }
 
 function normalizeLogLevel(level: string): LogLevel {

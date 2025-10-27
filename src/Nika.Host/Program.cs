@@ -241,7 +241,7 @@ static void HandleInitialize(Stream stdout, Encoding encoding, string? requestId
         roslynLanguageVersion = "preview",
         capabilities = new
         {
-            supportsRangeFormatting = false,
+            supportsRangeFormatting = true,
             supportsDiagnostics = true,
             supportsTelemetry = false
         }
@@ -307,8 +307,23 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         }
     }
 
+    TextSpan? range = null;
+    if (payload.ValueKind == JsonValueKind.Object &&
+        payload.TryGetProperty("range", out var rangeElement) &&
+        rangeElement.ValueKind == JsonValueKind.Object &&
+        rangeElement.TryGetProperty("start", out var rangeStartElement) &&
+        rangeElement.TryGetProperty("end", out var rangeEndElement) &&
+        rangeStartElement.TryGetInt32(out var rangeStart) &&
+        rangeEndElement.TryGetInt32(out var rangeEnd) &&
+        rangeStart >= 0 &&
+        rangeEnd > rangeStart &&
+        rangeEnd <= content.Length)
+    {
+        range = TextSpan.FromBounds(rangeStart, rangeEnd);
+    }
+
     var requestOptions = new FormattingRequestOptions(printWidth, tabWidth, useTabs, endOfLine);
-    var formatResult = FormatWithRoslyn(content, requestOptions);
+    var formatResult = FormatWithRoslyn(content, requestOptions, range);
 
     var responsePayload = new
     {
@@ -334,7 +349,7 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
     });
 }
 
-static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options)
+static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options, TextSpan? range)
 {
     var formatStopwatch = Stopwatch.StartNew();
     var diagnostics = new List<object>();
@@ -372,8 +387,17 @@ static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions op
         }
     }
 
-    var formattedDocument = Formatter.FormatAsync(document, workspaceOptions, CancellationToken.None)
-        .GetAwaiter().GetResult();
+    Document formattedDocument;
+    if (range is { } span)
+    {
+        formattedDocument = Formatter.FormatAsync(document, span, workspaceOptions, CancellationToken.None)
+            .GetAwaiter().GetResult();
+    }
+    else
+    {
+        formattedDocument = Formatter.FormatAsync(document, workspaceOptions, CancellationToken.None)
+            .GetAwaiter().GetResult();
+    }
     var formattedText = formattedDocument.GetTextAsync(CancellationToken.None)
         .GetAwaiter().GetResult()
         .ToString();

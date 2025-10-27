@@ -2,6 +2,8 @@
 
 Prettier plugin for C# powered by a persistent Roslyn host process.
 
+Targets the latest Roslyn preview so C# 12, 13, and 14 syntax (raw strings, partial properties, optional lambda parameters, collection expressions, etc.) format correctly without waiting for compiler updates.
+
 ## Packages
 
 - `packages/prettier-plugin-nika`: JavaScript bridge that integrates with Prettier and forwards formatting requests to the host.

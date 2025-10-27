@@ -24,7 +24,8 @@ const printer: Printer<NikaAst> = {
     }
 
     const formattingOptions = resolveFormattingOptions(options);
-    return hostClient.format(node.originalText, formattingOptions);
+    const range = resolveRange(node.originalText, options);
+    return hostClient.format(node.originalText, formattingOptions, range);
   }
 };
 
@@ -57,10 +58,33 @@ function resolveFormattingOptions(options: Parameters<Printer<NikaAst>["print"]>
 
   const tabWidth = typeof options.tabWidth === "number" && Number.isFinite(options.tabWidth)
     ? Math.max(1, Math.trunc(options.tabWidth))
-    : 2;
+    : 4;
 
   const useTabs = Boolean(options.useTabs);
   const endOfLine = options.endOfLine === "crlf" ? "crlf" : "lf";
 
   return { printWidth, tabWidth, useTabs, endOfLine };
+}
+
+function resolveRange(text: string, options: Parameters<Printer<NikaAst>["print"]>[1]) {
+  const rawStart = typeof options.rangeStart === "number" && Number.isFinite(options.rangeStart)
+    ? Math.max(0, Math.trunc(options.rangeStart))
+    : 0;
+
+  const hasExplicitEnd = typeof options.rangeEnd === "number" && Number.isFinite(options.rangeEnd);
+  const rawEnd = hasExplicitEnd ? Math.trunc(options.rangeEnd) : text.length;
+  const clampedEnd = Math.min(text.length, Math.max(rawStart, rawEnd));
+
+  if (rawStart <= 0 && (!hasExplicitEnd || clampedEnd >= text.length)) {
+    return null;
+  }
+
+  if (clampedEnd <= rawStart) {
+    return null;
+  }
+
+  return {
+    start: rawStart,
+    end: clampedEnd
+  };
 }

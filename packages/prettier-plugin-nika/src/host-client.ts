@@ -23,6 +23,7 @@ type WorkerMessage =
       source: string;
       sharedBuffer: SharedArrayBuffer;
       options: FormattingOptions;
+      range: FormatRange | null;
     }
   | {
       type: "shutdown";
@@ -44,6 +45,11 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
 
 const CURRENT_LOG_LEVEL = normalizeLogLevel(process.env.NIKA_LOG_LEVEL ?? "warn");
 
+type FormatRange = {
+  start: number;
+  end: number;
+};
+
 export type FormattingOptions = {
   printWidth: number;
   tabWidth: number;
@@ -63,14 +69,14 @@ export class HostClient {
     this.launchSpec = launchSpec ?? null;
   }
 
-  format(source: string, options: FormattingOptions): string {
+  format(source: string, options: FormattingOptions, range?: FormatRange | null): string {
     try {
       let attempt = 0;
       let lastError: unknown;
 
       while (attempt < this.restartAttempts) {
         try {
-          return this.sendFormatRequest(source, options);
+          return this.sendFormatRequest(source, options, range ?? null);
         } catch (error) {
           lastError = error;
           attempt += 1;
@@ -88,7 +94,11 @@ export class HostClient {
     }
   }
 
-  private sendFormatRequest(source: string, formatting: FormattingOptions): string {
+  private sendFormatRequest(
+    source: string,
+    formatting: FormattingOptions,
+    range: FormatRange | null
+  ): string {
     const worker = this.ensureWorker();
     const responseCapacity = computeResponseCapacity(source);
     const sharedBuffer = new SharedArrayBuffer(8 + responseCapacity);
@@ -103,7 +113,8 @@ export class HostClient {
       id: requestId,
       source,
       sharedBuffer,
-      options: formatting
+      options: formatting,
+      range
     };
 
     worker.postMessage(message);
