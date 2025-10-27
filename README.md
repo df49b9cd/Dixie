@@ -34,5 +34,6 @@ During `npm install`, the plugin verifies the bundled host binary using `manifes
 
 - `NIKA_HOST_CACHE` — custom cache directory for downloaded/verified hosts.
 - `NIKA_HOST_PATH` — explicit path to a host binary (helpful for air-gapped environments or locally built snapshots).
+- `NIKA_TELEMETRY_FILE` — opt-in JSON lines log for format metrics; leave unset to disable.
 
 To ship updated binaries as part of a release run `npm run build:host`; the script refreshes `packages/prettier-plugin-nika/bin/` and the manifest with new checksums.
