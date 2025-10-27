@@ -34,6 +34,7 @@ type WorkerMessage =
       id: string;
       source: string;
       sharedBuffer: SharedArrayBuffer;
+      options: FormattingOptions;
     }
   | {
       type: "shutdown";
@@ -58,6 +59,13 @@ type PendingRequest = {
 };
 
 type LogLevel = "debug" | "info" | "warn" | "error";
+
+type FormattingOptions = {
+  printWidth: number;
+  tabWidth: number;
+  useTabs: boolean;
+  endOfLine: "lf" | "crlf";
+};
 
 const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   debug: 10,
@@ -92,18 +100,23 @@ class WorkerHostClient {
     this.restartAttempts = Math.max(1, input.restartAttempts);
   }
 
-  async format(source: string): Promise<{ formatted: string; diagnostics: unknown[] }> {
+  async format(
+    source: string,
+    options: FormattingOptions
+  ): Promise<{ formatted: string; diagnostics: unknown[] }> {
     let attempt = 0;
     let lastError: unknown;
 
     while (attempt < this.restartAttempts) {
       try {
         const host = await this.ensureHost();
+        const normalizedOptions = normalizeFormattingOptions(options);
+
         const formatPayload = formatRequestPayloadSchema.parse({
           filePath: null as string | null,
           content: source,
           range: null as { start: number; end: number } | null,
-          options: defaultFormattingOptions(),
+          options: normalizedOptions,
           sessionId: this.sessionId,
           traceToken: randomUUID()
         });
@@ -491,11 +504,11 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
     return;
   }
 
-  const { source, sharedBuffer } = message;
+  const { source, options, sharedBuffer } = message;
   const stateView = createSharedView(sharedBuffer);
 
   try {
-    const result = await hostClient.format(source);
+    const result = await hostClient.format(source, options);
     writeResponse(stateView, 1, {
       status: "ok",
       formatted: result.formatted,
@@ -542,13 +555,13 @@ function writeResponse(
   Atomics.notify(view.state, 0);
 }
 
-function defaultFormattingOptions() {
+function normalizeFormattingOptions(options: FormattingOptions) {
   return {
-    printWidth: 80,
-    tabWidth: 2,
-    useTabs: false,
-    endOfLine: "lf" as const
-  };
+    printWidth: Number.isFinite(options.printWidth) ? Math.max(40, Math.trunc(options.printWidth)) : 80,
+    tabWidth: Number.isFinite(options.tabWidth) ? Math.max(1, Math.trunc(options.tabWidth)) : 2,
+    useTabs: options.useTabs ?? false,
+    endOfLine: options.endOfLine === "crlf" ? "crlf" : "lf"
+  } as const;
 }
 
 function normalizeLogLevel(level: string): LogLevel {

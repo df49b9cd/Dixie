@@ -26,11 +26,11 @@
 
 **Objective:** Produce stable whole-file formatting via Roslyn that mirrors Prettier principles.
 
-- [ ] Parse documents with `CSharpSyntaxTree.ParseText` and format via `Formatter.FormatAsync`.
-- [ ] Map Prettier options (`printWidth`, `tabWidth`, `useTabs`, `endOfLine`) to Roslyn `Workspace` options.
-- [ ] Preserve comments, directives, and trivia; verify against edge-case fixtures (XML docs, `#if`, `#nullable`).
-- [ ] Return actionable diagnostics (e.g., parse errors) and ensure plugin displays friendly messages.
-- [ ] Benchmark large files (>1k lines) to validate latency targets (<500 ms per format).
+- [x] Parse documents with `CSharpSyntaxTree.ParseText` and format via `Formatter.FormatAsync`.
+- [x] Map Prettier options (`printWidth`, `tabWidth`, `useTabs`, `endOfLine`) to Roslyn `Workspace` options.
+- [x] Preserve comments, directives, and trivia; verify against edge-case fixtures (XML docs, `#if`, `#nullable`).
+- [x] Return actionable diagnostics (e.g., parse errors) and ensure plugin displays friendly messages.
+- [x] Benchmark large files (>1k lines) to validate latency targets (<500 ms per format).
 
 ## Milestone 3 — Advanced Formatting & Partial Ranges (Week 6–8)
 

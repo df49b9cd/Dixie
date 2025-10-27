@@ -5,6 +5,14 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.CSharp.Formatting;
+using Microsoft.CodeAnalysis.Options;
+using Nika.Host;
 
 const int ProtocolVersion = 1;
 
@@ -259,9 +267,11 @@ static void HandleInitialize(Stream stdout, Encoding encoding, string? requestId
 
 static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, JsonElement payload)
 {
-    var stopwatch = Stopwatch.StartNew();
     string content = string.Empty;
     string endOfLine = "lf";
+    int tabWidth = 2;
+    int printWidth = 80;
+    bool useTabs = false;
 
     if (payload.ValueKind == JsonValueKind.Object)
     {
@@ -271,17 +281,105 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         }
 
         if (payload.TryGetProperty("options", out var optionsElement) &&
-            optionsElement.ValueKind == JsonValueKind.Object &&
-            optionsElement.TryGetProperty("endOfLine", out var endOfLineElement))
+            optionsElement.ValueKind == JsonValueKind.Object)
         {
-            endOfLine = endOfLineElement.GetString() ?? "lf";
+            if (optionsElement.TryGetProperty("endOfLine", out var endOfLineElement))
+            {
+                endOfLine = endOfLineElement.GetString() ?? "lf";
+            }
+
+            if (optionsElement.TryGetProperty("tabWidth", out var tabWidthElement) &&
+                tabWidthElement.TryGetInt32(out var parsedTabWidth))
+            {
+                tabWidth = Math.Clamp(parsedTabWidth, 1, 16);
+            }
+
+            if (optionsElement.TryGetProperty("printWidth", out var printWidthElement) &&
+                printWidthElement.TryGetInt32(out var parsedPrintWidth))
+            {
+                printWidth = Math.Clamp(parsedPrintWidth, 40, 240);
+            }
+
+            if (optionsElement.TryGetProperty("useTabs", out var useTabsElement))
+            {
+                useTabs = useTabsElement.ValueKind == JsonValueKind.True;
+            }
         }
     }
 
-    var normalized = NormalizeLineEndings(content, endOfLine);
-    normalized = EnsureTrailingNewline(normalized);
+    var requestOptions = new FormattingRequestOptions(printWidth, tabWidth, useTabs, endOfLine);
+    var formatResult = FormatWithRoslyn(content, requestOptions);
 
+    var responsePayload = new
+    {
+        ok = true,
+        formatted = formatResult.FormattedText,
+        diagnostics = formatResult.Diagnostics,
+        metrics = new
+        {
+            elapsedMs = formatResult.ElapsedMilliseconds,
+            parseDiagnostics = formatResult.ParseDiagnostics
+        }
+    };
+
+    SendResponse(stdout, encoding, requestId, "format", responsePayload);
+
+    SendLogNotification(stdout, encoding, "debug", "format completed", new
+    {
+        elapsedMs = formatResult.ElapsedMilliseconds,
+        originalLength = content.Length,
+        normalizedLength = formatResult.FormattedText.Length,
+        diagnostics = formatResult.Diagnostics.Count,
+        parseDiagnostics = formatResult.ParseDiagnostics
+    });
+}
+
+static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options)
+{
+    var formatStopwatch = Stopwatch.StartNew();
     var diagnostics = new List<object>();
+    var newline = options.EndOfLine == "crlf" ? "\r\n" : "\n";
+
+    using var workspace = new AdhocWorkspace();
+
+    var parseOptions = new CSharpParseOptions(languageVersion: LanguageVersion.Preview);
+
+    var projectId = ProjectId.CreateNewId();
+    var documentId = DocumentId.CreateNewId(projectId);
+    var solution = workspace.CurrentSolution
+        .AddProject(projectId, "Nika.Format", "Nika.Format", LanguageNames.CSharp)
+        .WithProjectCompilationOptions(projectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+        .WithProjectParseOptions(projectId, parseOptions)
+        .AddDocument(documentId, "nika.cs", SourceText.From(content, Encoding.UTF8));
+
+    var document = solution.GetDocument(documentId) ?? throw new InvalidOperationException("Failed to create Roslyn document.");
+
+    var workspaceOptions = workspace.Options
+        .WithChangedOption(FormattingOptions.UseTabs, LanguageNames.CSharp, options.UseTabs)
+        .WithChangedOption(FormattingOptions.TabSize, LanguageNames.CSharp, options.TabWidth)
+        .WithChangedOption(FormattingOptions.IndentationSize, LanguageNames.CSharp, options.TabWidth)
+        .WithChangedOption(FormattingOptions.NewLine, LanguageNames.CSharp, newline);
+
+    var syntaxTree = document.GetSyntaxTreeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    var parseDiagnostics = 0;
+
+    if (syntaxTree is not null)
+    {
+        foreach (var diagnostic in syntaxTree.GetDiagnostics())
+        {
+            parseDiagnostics++;
+            diagnostics.Add(ConvertDiagnostic(diagnostic));
+        }
+    }
+
+    var formattedDocument = Formatter.FormatAsync(document, workspaceOptions, CancellationToken.None)
+        .GetAwaiter().GetResult();
+    var formattedText = formattedDocument.GetTextAsync(CancellationToken.None)
+        .GetAwaiter().GetResult()
+        .ToString();
+
+    formatStopwatch.Stop();
+
     var todoIndex = content.IndexOf("TODO", StringComparison.Ordinal);
     if (todoIndex >= 0)
     {
@@ -294,29 +392,9 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         });
     }
 
-    stopwatch.Stop();
+    var normalizedText = EnsureTrailingNewline(formattedText, newline);
 
-    var responsePayload = new
-    {
-        ok = true,
-        formatted = normalized,
-        diagnostics,
-        metrics = new
-        {
-            elapsedMs = stopwatch.ElapsedMilliseconds,
-            parseDiagnostics = 0
-        }
-    };
-
-    SendResponse(stdout, encoding, requestId, "format", responsePayload);
-
-    SendLogNotification(stdout, encoding, "debug", "format completed", new
-    {
-        elapsedMs = stopwatch.ElapsedMilliseconds,
-        originalLength = content.Length,
-        normalizedLength = normalized.Length,
-        diagnostics = diagnostics.Count
-    });
+    return new FormatResult(normalizedText, diagnostics, formatStopwatch.ElapsedMilliseconds, parseDiagnostics);
 }
 
 static void HandlePing(Stream stdout, Encoding encoding, string? requestId, JsonElement payload, long uptimeMs)
@@ -420,6 +498,29 @@ static void SendLogNotification(Stream stdout, Encoding encoding, string level, 
     WriteMessage(stdout, encoding, envelope);
 }
 
+static object ConvertDiagnostic(Diagnostic diagnostic)
+{
+    var severity = diagnostic.Severity switch
+    {
+        DiagnosticSeverity.Error => "error",
+        DiagnosticSeverity.Warning => "warning",
+        DiagnosticSeverity.Info => "info",
+        DiagnosticSeverity.Hidden => "info",
+        _ => "info"
+    };
+
+    var hasLocation = diagnostic.Location != Location.None && diagnostic.Location.IsInSource;
+    var span = hasLocation ? diagnostic.Location.SourceSpan : default;
+
+    return new
+    {
+        severity,
+        message = diagnostic.GetMessage(),
+        start = hasLocation ? span.Start : 0,
+        end = hasLocation ? span.End : 0
+    };
+}
+
 static void WriteMessage(Stream stdout, Encoding encoding, object message)
 {
     var json = JsonSerializer.Serialize(message);
@@ -432,24 +533,26 @@ static void WriteMessage(Stream stdout, Encoding encoding, object message)
     stdout.Flush();
 }
 
-static string NormalizeLineEndings(string text, string endOfLine)
-{
-    var normalized = text
-        .Replace("\r\n", "\n", StringComparison.Ordinal)
-        .Replace('\r', '\n');
-
-    return endOfLine switch
-    {
-        "crlf" => normalized.Replace("\n", "\r\n", StringComparison.Ordinal),
-        _ => normalized
-    };
-}
-
-static string EnsureTrailingNewline(string text)
+static string EnsureTrailingNewline(string text, string endOfLine)
 {
     if (string.IsNullOrEmpty(text))
     {
-        return "\n";
+        return endOfLine;
+    }
+
+    if (text.EndsWith(endOfLine, StringComparison.Ordinal))
+    {
+        return text;
+    }
+
+    if (endOfLine == "\r\n")
+    {
+        if (text.EndsWith("\r", StringComparison.Ordinal))
+        {
+            return text + "\n";
+        }
+
+        return text + endOfLine;
     }
 
     if (text.EndsWith("\n", StringComparison.Ordinal))

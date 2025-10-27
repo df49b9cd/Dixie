@@ -51,7 +51,12 @@ describe("HostClient integration", () => {
     });
 
     const source = "class Foo { // TODO fix }";
-    const result = client.format(source);
+    const result = client.format(source, {
+      printWidth: 100,
+      tabWidth: 2,
+      useTabs: false,
+      endOfLine: "lf"
+    });
 
     expect(result.trim()).toBe(source);
     expect(result.endsWith("\n")).toBe(true);
