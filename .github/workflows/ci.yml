@@ -36,5 +36,5 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: Build Roslyn host
-        run: dotnet build src/Nika.Host
+      - name: Host smoke test
+        run: npm run ci:smoke
