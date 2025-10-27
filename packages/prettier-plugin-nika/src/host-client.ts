@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
 import packageJson from "../package.json";
@@ -139,6 +139,16 @@ export class HostClient {
     if (finalStatus === 1 && payload.status === "ok") {
       const formatted = typeof payload.formatted === "string" ? payload.formatted : source;
       const diagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics : [];
+      const elapsedMs = typeof payload.metrics?.elapsedMs === "number" ? payload.metrics.elapsedMs : null;
+
+      recordTelemetry({
+        success: true,
+        elapsedMs,
+        diagnostics: diagnostics.length,
+        options: formatting,
+        range: range ?? null,
+        error: null
+      });
 
       if (diagnostics.length > 0) {
         for (const diagnostic of diagnostics) {
@@ -158,6 +168,14 @@ export class HostClient {
     }
 
     if (payload.status === "error") {
+      recordTelemetry({
+        success: false,
+        elapsedMs: null,
+        diagnostics: undefined,
+        error: payload.message ?? "Host request failed.",
+        options: formatting,
+        range: range ?? null
+      });
       throw new Error(payload.message ?? "Host request failed.");
     }
 
@@ -239,15 +257,15 @@ export class HostClient {
   }
 }
 
-export const hostClient = new HostClient();
-export const _encodeMessageForTests = encodeMessage;
-export const _parseEnvelopesForTests = parseEnvelopes;
-
 type WorkerResponse =
   | {
       status: "ok";
       formatted: string;
       diagnostics?: unknown[];
+      metrics?: {
+        elapsedMs?: number;
+        parseDiagnostics?: number;
+      };
     }
   | {
       status: "error";
@@ -367,3 +385,39 @@ function formatError(error: unknown): string {
 
   return String(error);
 }
+
+type TelemetryPayload = {
+  success: boolean;
+  elapsedMs: number | null;
+  diagnostics?: number;
+  error: string | null;
+  options: FormattingOptions;
+  range: FormatRange | null;
+};
+
+function recordTelemetry(payload: TelemetryPayload): void {
+  const telemetryFile = process.env.NIKA_TELEMETRY_FILE;
+  if (!telemetryFile) {
+    return;
+  }
+
+  const entry = {
+    timestamp: new Date().toISOString(),
+    success: payload.success,
+    elapsedMs: payload.elapsedMs,
+    diagnostics: payload.diagnostics,
+    error: payload.error,
+    options: payload.options,
+    range: payload.range ?? undefined
+  };
+
+  try {
+    appendFileSync(telemetryFile, `${JSON.stringify(entry)}\n`, { encoding: "utf8" });
+  } catch (error) {
+    log("debug", `[nika] telemetry write failed: ${formatError(error)}`);
+  }
+}
+
+export const hostClient = new HostClient();
+export const _encodeMessageForTests = encodeMessage;
+export const _parseEnvelopesForTests = parseEnvelopes;

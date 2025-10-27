@@ -46,11 +46,11 @@
 
 **Objective:** Make local usage, demos, and documentation intuitive.
 
-- [ ] Create `npm run demo` script to format fixtures via Prettier CLI with the plugin.
-- [ ] Assemble sample corpus (open-source snippets, Roslyn tests) with snapshot-based golden files.
-- [ ] Produce developer docs: architecture, protocol reference, troubleshooting, FAQ.
-- [ ] Add telemetry hooks (optional) or structured logs to aid issue triage while respecting privacy.
-- [ ] Prepare VS Code launch configs/tasks for debugging the host and plugin concurrently.
+- [x] Create `npm run demo` script to format fixtures via Prettier CLI with the plugin.
+- [x] Assemble sample corpus (open-source snippets, Roslyn tests) with snapshot-based golden files.
+- [x] Produce developer docs: architecture, protocol reference, troubleshooting, FAQ.
+- [x] Add telemetry hooks (optional) or structured logs to aid issue triage while respecting privacy.
+- [x] Prepare VS Code launch configs/tasks for debugging the host and plugin concurrently.
 
 ## Milestone 5 — Packaging & Distribution (Week 8–10)
 

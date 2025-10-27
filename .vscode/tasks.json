@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: demo",
+      "type": "npm",
+      "script": "demo"
+    },
+    {
+      "label": "npm: test plugin",
+      "type": "npm",
+      "script": "test",
+      "path": "packages/prettier-plugin-nika"
+    },
+    {
+      "label": "dotnet: build host",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "src/Nika.Host"],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

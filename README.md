@@ -4,6 +4,12 @@ Prettier plugin for C# powered by a persistent Roslyn host process.
 
 Targets the latest Roslyn preview so C# 12, 13, and 14 syntax (raw strings, partial properties, optional lambda parameters, collection expressions, etc.) format correctly without waiting for compiler updates.
 
+Additional docs:
+
+- `docs/development.md` – day-to-day workflows, telemetry, and VS Code setup.
+- `docs/troubleshooting.md` – common failure modes and mitigations.
+- `docs/faq.md` – language feature coverage and debugging tips.
+
 ## Packages
 
 - `packages/prettier-plugin-nika`: JavaScript bridge that integrates with Prettier and forwards formatting requests to the host.
@@ -15,5 +21,6 @@ Targets the latest Roslyn preview so C# 12, 13, and 14 syntax (raw strings, part
 2. Install dependencies with npm: `npm install`.
 3. Build the plugin: `npm run build --workspace prettier-plugin-nika`.
 4. Restore the .NET host: `dotnet restore src/Nika.Host`.
+5. Run the demo formatter over the sample corpus: `npm run demo`.
 
 See `docs/architecture.md` for detailed plans and next steps.

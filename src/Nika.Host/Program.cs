@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.Options;
 using Nika.Host;
 
 const int ProtocolVersion = 1;
+const double DefaultMemoryBudgetMb = 512;
 
 var stdin = Console.OpenStandardInput();
 var stdout = Console.OpenStandardOutput();
@@ -323,7 +324,7 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
     }
 
     var requestOptions = new FormattingRequestOptions(printWidth, tabWidth, useTabs, endOfLine);
-    var formatResult = FormatWithRoslyn(content, requestOptions, range);
+    var formatResult = FormatWithRoslyn(content, requestOptions, range, out var formattingMemoryUsageMb);
 
     var responsePayload = new
     {
@@ -345,11 +346,23 @@ static void HandleFormat(Stream stdout, Encoding encoding, string? requestId, Js
         originalLength = content.Length,
         normalizedLength = formatResult.FormattedText.Length,
         diagnostics = formatResult.Diagnostics.Count,
-        parseDiagnostics = formatResult.ParseDiagnostics
+        parseDiagnostics = formatResult.ParseDiagnostics,
+        memoryMb = formattingMemoryUsageMb
     });
+
+    var memoryBudgetMb = GetMemoryBudgetMb();
+
+    if (formattingMemoryUsageMb > memoryBudgetMb)
+    {
+        SendLogNotification(stdout, encoding, "warn", "memory budget exceeded", new
+        {
+            budgetMb = memoryBudgetMb,
+            actualMb = formattingMemoryUsageMb
+        });
+    }
 }
 
-static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options, TextSpan? range)
+static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions options, TextSpan? range, out double memoryUsageMb)
 {
     var formatStopwatch = Stopwatch.StartNew();
     var diagnostics = new List<object>();
@@ -403,6 +416,7 @@ static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions op
         .ToString();
 
     formatStopwatch.Stop();
+    memoryUsageMb = GC.GetTotalMemory(false) / (1024d * 1024d);
 
     var todoIndex = content.IndexOf("TODO", StringComparison.Ordinal);
     if (todoIndex >= 0)
@@ -520,6 +534,17 @@ static void SendLogNotification(Stream stdout, Encoding encoding, string level, 
     };
 
     WriteMessage(stdout, encoding, envelope);
+}
+
+static double GetMemoryBudgetMb()
+{
+    var value = Environment.GetEnvironmentVariable("NIKA_HOST_MEMORY_BUDGET_MB");
+    if (double.TryParse(value, out var parsed) && parsed > 0)
+    {
+        return parsed;
+    }
+
+    return DefaultMemoryBudgetMb;
 }
 
 static object ConvertDiagnostic(Diagnostic diagnostic)

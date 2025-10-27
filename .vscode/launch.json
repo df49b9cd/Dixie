@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Run Vitest (plugin)",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--watch=false"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "NIKA_LOG_LEVEL": "debug"
+      }
+    },
+    {
+      "type": "coreclr",
+      "request": "launch",
+      "name": "Debug Nika.Host",
+      "program": "${workspaceFolder}/src/Nika.Host/bin/Debug/net9.0/Nika.Host.dll",
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "preLaunchTask": "dotnet: build host"
+    }
+  ]
+}
