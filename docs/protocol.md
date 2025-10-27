@@ -1,6 +1,7 @@
 # Project Nika Protocol Specification
 
 ## Overview
+
 Nika uses a lightweight, line-delimited JSON protocol over the host process stdin/stdout streams. Messages follow Language Server Protocol framing for ease of reuse and tooling compatibility.
 
 ```
@@ -15,6 +16,7 @@ Content-Length: <byte-length>\r\n
 - Host responses must echo the `requestId` to allow correlation.
 
 ## Message Envelope
+
 ```jsonc
 {
   "version": 1,
@@ -33,9 +35,11 @@ Content-Length: <byte-length>\r\n
 ## Commands
 
 ### initialize
+
 - **Direction:** request (plugin ➜ host)
 - **Purpose:** establish capabilities and validate compatibility.
 - **Payload (request):**
+
   ```jsonc
   {
     "clientVersion": "0.1.0",
@@ -47,7 +51,9 @@ Content-Length: <byte-length>\r\n
     }
   }
   ```
+
 - **Payload (response):**
+
   ```jsonc
   {
     "ok": true,
@@ -60,12 +66,15 @@ Content-Length: <byte-length>\r\n
     }
   }
   ```
+
 - On incompatibility, host returns `ok: false` with `reason` and closes the stream.
 
 ### format
+
 - **Direction:** request
 - **Purpose:** format an entire document or specific span.
 - **Payload (request):**
+
   ```jsonc
   {
     "filePath": "/abs/path/File.cs",
@@ -81,7 +90,9 @@ Content-Length: <byte-length>\r\n
     "traceToken": "optional-correlation-id"
   }
   ```
+
 - **Payload (response):**
+
   ```jsonc
   {
     "ok": true,
@@ -100,13 +111,16 @@ Content-Length: <byte-length>\r\n
     }
   }
   ```
+
 - On failure (`ok: false`) host must supply `errorCode`, `message`, and optionally `details`.
 
 ### ping
+
 - **Direction:** request
 - **Purpose:** determine if host is responsive and retrieve heartbeat metrics.
 - **Payload (request):** `{ "timestamp": 1700000000 }`
 - **Payload (response):**
+
   ```jsonc
   {
     "ok": true,
@@ -117,6 +131,7 @@ Content-Length: <byte-length>\r\n
   ```
 
 ### shutdown
+
 - **Direction:** request
 - **Purpose:** gracefully tear down host process.
 - **Payload (request):** `{ "reason": "idle-timeout" }`
@@ -124,9 +139,11 @@ Content-Length: <byte-length>\r\n
 - Host should exit after sending the response.
 
 ### error (notification)
+
 - **Direction:** host ➜ plugin
 - **Purpose:** surface fatal errors that prevent future work.
 - **Payload:**
+
   ```jsonc
   {
     "severity": "fatal" | "recoverable",
@@ -137,12 +154,15 @@ Content-Length: <byte-length>\r\n
     }
   }
   ```
+
 - Plugin must treat `fatal` notifications as a signal to dispose of the host.
 
 ### log (notification)
+
 - **Direction:** host ➜ plugin
 - **Purpose:** optional structured logging.
 - **Payload:**
+
   ```jsonc
   {
     "level": "info" | "warn" | "error" | "debug",
@@ -155,6 +175,7 @@ Content-Length: <byte-length>\r\n
   ```
 
 ## Error Codes
+
 - `HOST_VERSION_MISMATCH`: host binary version incompatible with plugin.
 - `PARSE_ERROR`: Roslyn could not parse the supplied source.
 - `FORMAT_FAILURE`: Roslyn formatter threw unexpected exception.
@@ -162,6 +183,7 @@ Content-Length: <byte-length>\r\n
 - `INTERNAL_ERROR`: unhandled host exception.
 
 ## State Machine
+
 1. Plugin spawns host, sends `initialize`.
 2. Host replies `ok: true` ➜ session enters **Ready** state.
 3. Plugin issues `format` requests; host processes them sequentially (current design).
@@ -169,11 +191,13 @@ Content-Length: <byte-length>\r\n
 5. Plugin sends `shutdown` on editor exit, idle timeout, or project closure.
 
 ## Backward Compatibility
+
 - Protocol `version` increments on breaking change. Plugin rejects lower versions it cannot understand.
 - Hosts may send additional fields; plugin must ignore unknown properties.
 - Requests include `capabilities` negotiation to detect optional features (e.g., range formatting) without breaking older hosts.
 
 ## Testing Strategy
+
 - JSON schema validation for each command (TS `zod` definitions, C# `JsonSerializer` attributes).
 - Golden request/response fixtures under `tests/protocol`.
 - Integration tests simulate timeouts, malformed payloads, and host restarts.
