@@ -19,7 +19,9 @@
     "test": "npm run test --workspaces --if-present",
     "prepare": "husky",
     "demo": "npm run demo --workspace prettier-plugin-nika",
-    "build:host": "node scripts/build-host.mjs"
+    "build:host": "node scripts/build-host.mjs",
+    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-nika",
+    "telemetry:report": "node scripts/telemetry-report.mjs"
   },
   "workspaces": [
     "packages/*"

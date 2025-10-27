@@ -64,6 +64,8 @@ type WorkerResponsePayload =
   | {
       status: "error";
       message?: string;
+      errorCode?: string | null;
+      details?: unknown;
     };
 
 type PendingRequest = {
@@ -94,6 +96,17 @@ const currentLogLevel = normalizeLogLevel(data.logLevel ?? "warn");
 
 if (!parentPort) {
   throw new Error("Host worker must have a parent port.");
+}
+
+class HostRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null = null,
+    readonly details: unknown = null
+  ) {
+    super(message);
+    this.name = "HostRequestError";
+  }
 }
 
 class WorkerHostClient {
@@ -144,7 +157,11 @@ class WorkerHostClient {
 
         if (!payload.ok) {
           const prefix = payload.errorCode ? `${payload.errorCode}: ` : "";
-          throw new Error(`${prefix}${payload.message ?? "Formatting failed."}`);
+          throw new HostRequestError(
+            `${prefix}${payload.message ?? "Formatting failed."}`,
+            payload.errorCode ?? null,
+            payload.details ?? null
+          );
         }
 
         const formatted = typeof payload.formatted === "string" ? payload.formatted : source;
@@ -534,9 +551,12 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
       metrics: result.metrics
     });
   } catch (error) {
+    const normalized = normalizeWorkerError(error);
     writeResponse(stateView, 2, {
       status: "error",
-      message: error instanceof Error ? error.message : String(error)
+      message: normalized.message,
+      errorCode: normalized.errorCode,
+      details: normalized.details
     });
   }
 }
@@ -626,4 +646,17 @@ function formatError(error: unknown): string {
   }
 
   return String(error);
+}
+
+function normalizeWorkerError(error: unknown): { message: string; errorCode: string | null; details: unknown } {
+  if (error instanceof HostRequestError) {
+    return {
+      message: error.message,
+      errorCode: error.code,
+      details: error.details
+    };
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return { message, errorCode: null, details: null };
 }

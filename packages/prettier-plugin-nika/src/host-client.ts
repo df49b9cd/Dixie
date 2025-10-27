@@ -64,6 +64,11 @@ export class HostClient {
   private readonly handshakeTimeoutMs = DEFAULT_HANDSHAKE_TIMEOUT_MS;
   private readonly requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
   private readonly restartAttempts = Math.max(1, DEFAULT_RESTART_ATTEMPTS);
+  private readonly memoryBudgetMb = getNumberEnv("NIKA_HOST_MEMORY_BUDGET_MB", 512);
+  private memoryPressureHits = 0;
+  private memoryPressureWarned = false;
+  private memoryGuardHits = 0;
+  private memoryGuardWarned = false;
 
   constructor(launchSpec?: HostLaunchSpec) {
     this.launchSpec = launchSpec ?? null;
@@ -147,6 +152,9 @@ export class HostClient {
       const workingSetDeltaMb =
         typeof metrics.workingSetDeltaMb === "number" ? metrics.workingSetDeltaMb : null;
 
+      this.observeMemoryPressure(workingSetMb);
+      this.memoryGuardHits = 0;
+
       recordTelemetry({
         success: true,
         elapsedMs,
@@ -156,7 +164,9 @@ export class HostClient {
         error: null,
         managedMemoryMb,
         workingSetMb,
-        workingSetDeltaMb
+        workingSetDeltaMb,
+        errorCode: null,
+        memoryBudgetMb: this.memoryBudgetMb
       });
 
       if (diagnostics.length > 0) {
@@ -177,6 +187,13 @@ export class HostClient {
     }
 
     if (payload.status === "error") {
+      const errorCode =
+        typeof payload.errorCode === "string" && payload.errorCode.length > 0
+          ? payload.errorCode
+          : null;
+
+      this.observeMemoryGuardTrip(errorCode);
+
       recordTelemetry({
         success: false,
         elapsedMs: null,
@@ -186,7 +203,9 @@ export class HostClient {
         range: range ?? null,
         managedMemoryMb: null,
         workingSetMb: null,
-        workingSetDeltaMb: null
+        workingSetDeltaMb: null,
+        errorCode,
+        memoryBudgetMb: this.memoryBudgetMb
       });
       throw new Error(payload.message ?? "Host request failed.");
     }
@@ -267,6 +286,44 @@ export class HostClient {
 
     return source;
   }
+
+  private observeMemoryPressure(workingSetMb: number | null): void {
+    if (workingSetMb === null || !Number.isFinite(workingSetMb)) {
+      this.memoryPressureHits = 0;
+      return;
+    }
+
+    const threshold = this.memoryBudgetMb * 0.85;
+    if (workingSetMb >= threshold) {
+      this.memoryPressureHits += 1;
+      if (!this.memoryPressureWarned && this.memoryPressureHits >= 3) {
+        const guidance = [
+          `[nika] Host working set peaked at ${workingSetMb.toFixed(1)} MB (budget ${this.memoryBudgetMb} MB).`,
+          "Consider increasing NIKA_HOST_MEMORY_BUDGET_MB or sharing telemetry via `npm run telemetry:report`."
+        ].join(" ");
+        log("warn", guidance);
+        this.memoryPressureWarned = true;
+      }
+    } else {
+      this.memoryPressureHits = 0;
+    }
+  }
+
+  private observeMemoryGuardTrip(errorCode: string | null): void {
+    if (errorCode !== "MEMORY_BUDGET_EXCEEDED") {
+      return;
+    }
+
+    this.memoryGuardHits += 1;
+    if (!this.memoryGuardWarned && this.memoryGuardHits >= 3) {
+      const message = [
+        "[nika] Host exceeded its memory budget multiple times.",
+        "Raise NIKA_HOST_MEMORY_BUDGET_MB or capture telemetry (npm run telemetry:report) and open an issue."
+      ].join(" ");
+      log("warn", message);
+      this.memoryGuardWarned = true;
+    }
+  }
 }
 
 type WorkerResponse =
@@ -285,6 +342,8 @@ type WorkerResponse =
   | {
       status: "error";
       message?: string;
+      errorCode?: string | null;
+      details?: unknown;
     };
 
 function createSharedView(sharedBuffer: SharedArrayBuffer): SharedStateView {
@@ -411,6 +470,8 @@ type TelemetryPayload = {
   managedMemoryMb: number | null;
   workingSetMb: number | null;
   workingSetDeltaMb: number | null;
+  errorCode: string | null;
+  memoryBudgetMb: number;
 };
 
 function recordTelemetry(payload: TelemetryPayload): void {
@@ -429,7 +490,9 @@ function recordTelemetry(payload: TelemetryPayload): void {
     range: payload.range ?? undefined,
     managedMemoryMb: payload.managedMemoryMb,
     workingSetMb: payload.workingSetMb,
-    workingSetDeltaMb: payload.workingSetDeltaMb
+    workingSetDeltaMb: payload.workingSetDeltaMb,
+    errorCode: payload.errorCode,
+    memoryBudgetMb: payload.memoryBudgetMb
   };
 
   try {

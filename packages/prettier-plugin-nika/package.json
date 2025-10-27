@@ -18,7 +18,9 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "npm run build && vitest run",
     "demo": "npm run build && node ./scripts/demo.mjs",
-    "postinstall": "node ./scripts/postinstall.mjs"
+    "postinstall": "node ./scripts/postinstall.mjs",
+    "smoke:host": "node ./scripts/postinstall.mjs --smoke-only",
+    "telemetry:report": "node ../../scripts/telemetry-report.mjs"
   },
   "peerDependencies": {
     "prettier": "^3.0.0"

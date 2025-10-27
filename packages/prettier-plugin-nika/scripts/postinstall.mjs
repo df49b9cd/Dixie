@@ -22,6 +22,15 @@ const SMOKE_TEST_TIMEOUT_MS = 8_000;
 const SMOKE_TEST_SHUTDOWN_TIMEOUT_MS = 4_000;
 
 async function main() {
+  const args = new Set(process.argv.slice(2));
+  const smokeOnly = args.has("--smoke-only");
+  const skipSmoke = args.has("--skip-smoke");
+
+  if (smokeOnly && skipSmoke) {
+    console.warn("[nika] Conflicting flags: --smoke-only and --skip-smoke. Skipping.");
+    return;
+  }
+
   const platformKey = hostPlatformMap[process.platform];
   if (!platformKey) {
     console.warn(`[nika] Unsupported platform ${process.platform}; skipping host download.`);
@@ -40,48 +49,61 @@ async function main() {
   const hostPath = path.join(packageRoot, entry.path);
   let hostReady = false;
 
-  if (await verifyChecksum(hostPath, entry.sha256)) {
+  if (!smokeOnly && await verifyChecksum(hostPath, entry.sha256)) {
     console.log(`[nika] Host binary already present for ${platformKey}.`);
     hostReady = true;
   }
 
-  const cacheHome = path.join(
-    process.env.NIKA_HOST_CACHE ?? path.join(process.env.HOME ?? process.cwd(), ".cache/nika"),
-    manifestVersion,
-    platformKey
-  );
-  const cachedPath = path.join(cacheHome, path.basename(entry.path));
+  if (!smokeOnly) {
+    const cacheHome = path.join(
+      process.env.NIKA_HOST_CACHE ?? path.join(process.env.HOME ?? process.cwd(), ".cache/nika"),
+      manifestVersion,
+      platformKey
+    );
+    const cachedPath = path.join(cacheHome, path.basename(entry.path));
 
-  if (!hostReady) {
-    if (await verifyChecksum(cachedPath, entry.sha256)) {
-      copyFile(cachedPath, hostPath);
-      hostReady = await verifyChecksum(hostPath, entry.sha256);
-    } else {
-      if (!entry.url) {
-        console.warn(
-          `[nika] Host binary is missing and manifest lacks download url. Run npm run build:host.`
-        );
-        return;
+    if (!hostReady) {
+      if (await verifyChecksum(cachedPath, entry.sha256)) {
+        copyFile(cachedPath, hostPath);
+        hostReady = await verifyChecksum(hostPath, entry.sha256);
+      } else {
+        if (!entry.url) {
+          console.warn(
+            `[nika] Host binary is missing and manifest lacks download url. Run npm run build:host.`
+          );
+          return;
+        }
+
+        mkdirSync(cacheHome, { recursive: true });
+        console.log(`[nika] Downloading host from ${entry.url}`);
+        const { stdout } = await execa("curl", ["-sSL", entry.url, "-o", cachedPath]);
+        if (stdout) {
+          console.log(stdout);
+        }
+
+        if (!(await verifyChecksum(cachedPath, entry.sha256))) {
+          throw new Error(`[nika] Downloaded binary failed checksum for ${platformKey}.`);
+        }
+
+        copyFile(cachedPath, hostPath);
+        hostReady = await verifyChecksum(hostPath, entry.sha256);
       }
-
-      mkdirSync(cacheHome, { recursive: true });
-      console.log(`[nika] Downloading host from ${entry.url}`);
-      const { stdout } = await execa("curl", ["-sSL", entry.url, "-o", cachedPath]);
-      if (stdout) {
-        console.log(stdout);
-      }
-
-      if (!(await verifyChecksum(cachedPath, entry.sha256))) {
-        throw new Error(`[nika] Downloaded binary failed checksum for ${platformKey}.`);
-      }
-
-      copyFile(cachedPath, hostPath);
-      hostReady = await verifyChecksum(hostPath, entry.sha256);
+    }
+  } else {
+    hostReady = existsSync(hostPath);
+    if (!hostReady) {
+      throw new Error(
+        `[nika] --smoke-only requested but host binary not found at ${hostPath}. Run npm run build:host.`
+      );
     }
   }
 
   if (!hostReady) {
     console.warn(`[nika] Unable to prepare host binary for ${platformKey}; skipping smoke test.`);
+    return;
+  }
+
+  if (skipSmoke || process.env.NIKA_POSTINSTALL_SKIP_SMOKE === "1") {
     return;
   }
 
