@@ -1,0 +1,1 @@
+- [ ] Generate manifest/checksum in CI (GitHub Actions) and skip bundling when MIRROR env is set.

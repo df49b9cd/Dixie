@@ -57,11 +57,11 @@
 
 **Objective:** Deliver binaries and npm artifacts with reproducible builds.
 
-- [ ] Publish host as self-contained ReadyToRun builds for macOS (x64/arm64), Windows (x64), Linux (x64/arm64).
+- [x] Publish host as self-contained ReadyToRun builds for macOS (x64/arm64), Windows (x64), Linux (x64/arm64) via `npm run build:host`.
 - [ ] Automate release pipeline (GitHub Actions) to build, test, sign, and attach binaries to GitHub Releases.
-- [ ] Implement plugin-side binary resolution, including checksum validation and helpful error surfaces.
+- [x] Implement plugin-side binary resolution, including checksum validation and helpful error surfaces (`scripts/postinstall.mjs`).
 - [ ] Add postinstall smoke test ensuring the bundled host launches and reports its version.
-- [ ] Document manual installation path for air-gapped environments.
+- [x] Document manual installation path for air-gapped environments (`README.md`, `docs/faq.md`).
 
 ## Milestone 6 — Preview Release & Feedback Loop (Week 10–12)
 

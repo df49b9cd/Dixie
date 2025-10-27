@@ -22,4 +22,9 @@ Yes. Use the VS Code launch configurations under `.vscode/launch.json` to run Vi
 - Set `NIKA_LOG_LEVEL=debug`. The host emits structured notifications (`log` command) that include context objects—these appear in the plugin when running Vitest or Prettier CLI.
 - Host binaries are verified during installation. Set `NIKA_HOST_CACHE` to control where downloaded binaries live, or `NIKA_HOST_PATH` to override the binary completely (useful for custom builds).
 
-Set `NIKA_LOG_LEVEL=debug`. The host emits structured notifications (`log` command) that include context objects—these appear in the plugin when running Vitest or Prettier CLI.
+## How can I verify the packaged binaries?
+
+- After `npm run build:host`, inspect `packages/prettier-plugin-nika/manifest.json` for SHA-256 hashes and sizes.
+- During `npm install`, the `postinstall.mjs` script validates the checksum before marking the host ready.
+- Use `shasum -a 256 bin/<rid>/nika-host` to manually validate the bundled binary matches the manifest entry.
+
