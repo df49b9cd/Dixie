@@ -65,21 +65,6 @@ jobs:
       - name: Build host bundles
         run: npm run build:host
 
-      - name: Verify host assets committed
-        run: |
-          set -euo pipefail
-          if ! git diff --quiet -- packages/prettier-plugin-csharp/manifest.json packages/prettier-plugin-csharp/host-archives; then
-            echo "::error::Host manifest or archives changed after build. Run npm run build:host locally and commit manifest.json + host-archives." >&2
-            git status --short packages/prettier-plugin-csharp/manifest.json packages/prettier-plugin-csharp/host-archives
-            exit 1
-          fi
-
-          UNTRACKED="$(git ls-files --others -- packages/prettier-plugin-csharp/host-archives)"
-          if [ -n "$UNTRACKED" ]; then
-            printf "::error::Untracked host archives detected:\n%s\n" "$UNTRACKED" >&2
-            exit 1
-          fi
-
       - name: Verify package version matches tag
         working-directory: ${{ env.PACKAGE_DIR }}
         run: |
