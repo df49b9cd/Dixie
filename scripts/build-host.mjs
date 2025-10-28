@@ -19,7 +19,8 @@ const targets = [
 ];
 
 async function main() {
-  const manifest = { version: getPluginVersion(), binaries: {} };
+  const pluginVersion = getPluginVersion();
+  const manifest = { version: pluginVersion, binaries: {} };
   for (const target of targets) {
     const outDir = resolve(projectRoot, target.output);
     if (!existsSync(outDir)) {
@@ -41,6 +42,7 @@ async function main() {
         "-p:PublishSingleFile=true",
         "-p:PublishReadyToRun=true",
         "-p:InvariantGlobalization=true",
+        `-p:Version=${pluginVersion}`,
         "--output",
         outDir
       ],
