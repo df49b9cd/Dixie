@@ -7,7 +7,7 @@
   "type": "commonjs",
   "files": [
     "dist",
-    "bin",
+    "host-archives",
     "manifest.json",
     "scripts/postinstall.mjs"
   ],

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, createReadStream } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, createReadStream, createWriteStream } from "node:fs";
 import { chmodSync } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { execa } from "execa";
+import { createGunzip, createGzip } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(__dirname, "..");
@@ -47,10 +48,19 @@ async function main() {
   }
 
   const hostPath = path.join(packageRoot, entry.path);
+  const archivePath =
+    typeof entry.archivePath === "string" ? path.join(packageRoot, entry.archivePath) : null;
+  const expectedArchiveSha =
+    typeof entry.archiveSha256 === "string" ? entry.archiveSha256 : entry.archiveSha ?? null;
+
   let hostReady = false;
 
-  if (!smokeOnly && await verifyChecksum(hostPath, entry.sha256)) {
-    console.log(`[dixie] Host binary already present for ${platformKey}.`);
+  if (await verifyChecksum(hostPath, entry.sha256)) {
+    hostReady = true;
+    if (!smokeOnly) {
+      console.log(`[dixie] Host binary already present for ${platformKey}.`);
+    }
+  } else if (await restoreFromArchive(hostPath, entry.sha256, archivePath, expectedArchiveSha)) {
     hostReady = true;
   }
 
@@ -67,7 +77,9 @@ async function main() {
         copyFile(cachedPath, hostPath);
         hostReady = await verifyChecksum(hostPath, entry.sha256);
       } else {
-        if (!entry.url) {
+        if (await restoreFromArchive(hostPath, entry.sha256, archivePath, expectedArchiveSha)) {
+          hostReady = true;
+        } else if (!entry.url) {
           console.warn(
             `[dixie] Host binary is missing and manifest lacks download url. Run npm run build:host.`
           );
@@ -87,10 +99,17 @@ async function main() {
 
         copyFile(cachedPath, hostPath);
         hostReady = await verifyChecksum(hostPath, entry.sha256);
+        if (hostReady && archivePath) {
+          await refreshArchive(hostPath, archivePath);
+        }
       }
     }
   } else {
-    hostReady = existsSync(hostPath);
+    if (!hostReady && (await restoreFromArchive(hostPath, entry.sha256, archivePath, expectedArchiveSha))) {
+      hostReady = true;
+    }
+
+    hostReady = hostReady || existsSync(hostPath);
     if (!hostReady) {
       throw new Error(
         `[dixie] --smoke-only requested but host binary not found at ${hostPath}. Run npm run build:host.`
@@ -127,6 +146,49 @@ function copyFile(src, dest) {
   writeFileSync(dest, data, { mode: 0o755 });
   chmodSync(dest, 0o755);
   console.log(`[dixie] Host ready at ${dest}`);
+}
+
+async function restoreFromArchive(hostPath, expectedSha, archivePath, expectedArchiveSha) {
+  if (!archivePath) {
+    return false;
+  }
+
+  if (expectedArchiveSha && !(await verifyChecksum(archivePath, expectedArchiveSha))) {
+    console.warn(`[dixie] Host archive failed checksum verification at ${archivePath}.`);
+    return false;
+  }
+
+  try {
+    await extractArchive(archivePath, hostPath);
+  } catch (error) {
+    console.warn(
+      `[dixie] Failed to restore host from archive: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return false;
+  }
+
+  return verifyChecksum(hostPath, expectedSha);
+}
+
+async function extractArchive(archivePath, destPath) {
+  mkdirSync(path.dirname(destPath), { recursive: true });
+  const gunzip = createGunzip();
+  await pipeline(createReadStream(archivePath), gunzip, createWriteStream(destPath, { mode: 0o755 }));
+  chmodSync(destPath, 0o755);
+}
+
+async function refreshArchive(hostPath, archivePath) {
+  try {
+    mkdirSync(path.dirname(archivePath), { recursive: true });
+    const gzip = createGzip({ level: 9, mtime: 0 });
+    await pipeline(createReadStream(hostPath), gzip, createWriteStream(archivePath));
+  } catch (error) {
+    console.warn(
+      `[dixie] Unable to refresh host archive: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 async function runSmokeTest(hostPath, manifestVersion, platformKey) {

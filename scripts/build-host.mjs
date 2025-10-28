@@ -1,9 +1,23 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { mkdirSync, existsSync, readdirSync, readFileSync, statSync, copyFileSync, writeFileSync, chmodSync } from "node:fs";
+import {
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  copyFileSync,
+  writeFileSync,
+  chmodSync,
+  rmSync,
+  createReadStream,
+  createWriteStream
+} from "node:fs";
 import { join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
+import { createGzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = resolve(__dirname, "..");
@@ -19,6 +33,8 @@ const targets = [
 ];
 
 async function main() {
+  const archiveRoot = resolve(pluginRoot, "host-archives");
+  ensureCleanDir(archiveRoot);
   const pluginVersion = getPluginVersion();
   const manifest = { version: pluginVersion, binaries: {} };
   for (const target of targets) {
@@ -53,7 +69,7 @@ async function main() {
     const sha = checksum(binaryPath);
 
     const binDir = resolve(pluginRoot, "bin", target.rid);
-    mkdirSync(binDir, { recursive: true });
+    ensureCleanDir(binDir);
     const destName = process.platform === "win32" && target.rid.startsWith("win") ? "dixie-host.exe" : "dixie-host";
     const destPath = join(binDir, destName);
     copyFileSync(binaryPath, destPath);
@@ -61,11 +77,22 @@ async function main() {
       chmodSync(destPath, 0o755);
     }
 
+    const archiveDir = resolve(archiveRoot, target.rid);
+    ensureCleanDir(archiveDir);
+    const archiveName = `${destName}.gz`;
+    const archivePath = join(archiveDir, archiveName);
+    await gzipBinary(binaryPath, archivePath);
+    const archiveStats = statSync(archivePath);
+    const archiveSha = checksum(archivePath);
+
     const manifestPath = relative(pluginRoot, destPath).replace(/\\/g, "/");
     manifest.binaries[target.rid] = {
       path: manifestPath,
       sha256: sha,
-      size: stats.size
+      size: stats.size,
+      archivePath: relative(pluginRoot, archivePath).replace(/\\/g, "/"),
+      archiveSha256: archiveSha,
+      archiveSize: archiveStats.size
     };
   }
 
@@ -93,6 +120,18 @@ function checksum(filePath) {
   const hash = createHash("sha256");
   hash.update(readFileSync(filePath));
   return hash.digest("hex");
+}
+
+function ensureCleanDir(directory) {
+  if (existsSync(directory)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+  mkdirSync(directory, { recursive: true });
+}
+
+async function gzipBinary(src, dest) {
+  const gzip = createGzip({ level: 9, mtime: 0 });
+  await pipeline(createReadStream(src), gzip, createWriteStream(dest));
 }
 
 main().catch((error) => {
