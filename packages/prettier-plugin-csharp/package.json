@@ -1,12 +1,15 @@
 {
   "name": "@df49b9cd/prettier-plugin-csharp",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Prettier plugin for C# powered by Roslyn",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
   "type": "commonjs",
   "files": [
-    "dist"
+    "dist",
+    "bin",
+    "manifest.json",
+    "scripts/postinstall.mjs"
   ],
   "engines": {
     "node": ">=22.21.0"
