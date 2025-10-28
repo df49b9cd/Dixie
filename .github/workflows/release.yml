@@ -17,6 +17,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      PACKAGE_DIR: packages/prettier-plugin-dixie
 
     steps:
       - name: Checkout
@@ -36,8 +38,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 22.12.0
+          node-version: 22.21.0
           cache: "npm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -62,6 +65,22 @@ jobs:
       - name: Build host bundles
         run: npm run build:host
 
+      - name: Verify package version matches tag
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: |
+          PACKAGE_VERSION="$(node -pe "require('./package.json').version")"
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+          if [ "${EXPECTED_TAG}" != "${{ steps.tag.outputs.value }}" ]; then
+            echo "Tag mismatch: expected ${EXPECTED_TAG}, got ${{ steps.tag.outputs.value }}" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        working-directory: ${{ env.PACKAGE_DIR }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
       - name: Package artifacts
         run: |
           set -euo pipefail
@@ -70,13 +89,13 @@ jobs:
           mkdir -p "$ARTIFACT_DIR"
 
           echo "Packing npm artifact..."
-          npm pack packages/prettier-plugin-nika --pack-destination "$ARTIFACT_DIR"
+          npm pack "$PACKAGE_DIR" --pack-destination "$ARTIFACT_DIR"
 
           echo "Packaging host binaries..."
-          for platform_dir in packages/prettier-plugin-nika/bin/*; do
+          for platform_dir in "$PACKAGE_DIR"/bin/*; do
             [ -d "$platform_dir" ] || continue
             platform="$(basename "$platform_dir")"
-            archive="$ARTIFACT_DIR/nika-host-$platform.zip"
+            archive="$ARTIFACT_DIR/dixie-host-$platform.zip"
             (
               cd "$platform_dir"
               zip -r "$archive" .
@@ -84,7 +103,7 @@ jobs:
           done
 
           echo "Copying manifest snapshot..."
-          cp packages/prettier-plugin-nika/manifest.json "$ARTIFACT_DIR/manifest.json"
+          cp "$PACKAGE_DIR/manifest.json" "$ARTIFACT_DIR/manifest.json"
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
