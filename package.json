@@ -1,7 +1,7 @@
 {
   "name": "dixie",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.4",
   "description": "Prettier plugin for C# backed by a Roslyn host",
   "author": "Project Dixie contributors",
   "license": "MIT",
