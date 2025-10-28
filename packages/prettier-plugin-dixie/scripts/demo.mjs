@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.resolve(__dirname, "../fixtures");
 const outputDir = path.resolve(__dirname, "../demo-output");
 
-const timeoutMs = Number.parseInt(process.env.NIKA_DEMO_TIMEOUT_MS ?? "15000", 10);
+const timeoutMs = Number.parseInt(process.env.DIXIE_DEMO_TIMEOUT_MS ?? "15000", 10);
 const files = fs
   .readdirSync(fixturesDir)
   .filter((file) => file.endsWith(".cs"))
@@ -29,7 +29,7 @@ for (const file of files) {
   try {
     const formatted = await Promise.race([
       prettier.format(source, {
-        parser: "nika-csharp",
+        parser: "dixie-csharp",
         plugins: [path.resolve(__dirname, "../dist/index.js")],
         printWidth: 100
       }),

@@ -5,14 +5,14 @@ import { existsSync } from "node:fs";
 import { HostClient } from "./host-client";
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
-const hostProjectPath = path.resolve(repoRoot, "src", "Nika.Host");
+const hostProjectPath = path.resolve(repoRoot, "src", "Dixie.Host");
 
 describe("HostClient integration", () => {
   let originalHostPath: string | undefined;
   let resolvedHostPath: string;
 
   beforeAll(async () => {
-    originalHostPath = process.env.NIKA_HOST_PATH;
+    originalHostPath = process.env.DIXIE_HOST_PATH;
 
     await execa("dotnet", ["build", hostProjectPath], {
       cwd: repoRoot,
@@ -22,25 +22,25 @@ describe("HostClient integration", () => {
     const buildRoot = path.resolve(hostProjectPath, "bin", "Debug", "net9.0");
 
     const candidates = [
-      path.join(buildRoot, "Nika.Host"),
-      path.join(buildRoot, "Nika.Host.exe"),
-      path.join(buildRoot, "Nika.Host.dll")
+      path.join(buildRoot, "Dixie.Host"),
+      path.join(buildRoot, "Dixie.Host.exe"),
+      path.join(buildRoot, "Dixie.Host.dll")
     ];
 
     const found = candidates.find((candidate) => existsSync(candidate));
     if (!found) {
-      throw new Error("Failed to locate built Nika host binary.");
+      throw new Error("Failed to locate built Dixie host binary.");
     }
 
     resolvedHostPath = found;
-    process.env.NIKA_HOST_PATH = resolvedHostPath;
+    process.env.DIXIE_HOST_PATH = resolvedHostPath;
   }, 120_000);
 
   afterAll(() => {
     if (originalHostPath === undefined) {
-      delete process.env.NIKA_HOST_PATH;
+      delete process.env.DIXIE_HOST_PATH;
     } else {
-      process.env.NIKA_HOST_PATH = originalHostPath;
+      process.env.DIXIE_HOST_PATH = originalHostPath;
     }
   });
 

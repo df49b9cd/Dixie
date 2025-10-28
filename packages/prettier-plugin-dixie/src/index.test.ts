@@ -1,11 +1,11 @@
 import prettier from "prettier";
 import plugin from "./index";
 
-describe("prettier-plugin-nika", () => {
+describe("prettier-plugin-dixie", () => {
   it("returns the original text until Roslyn host integration is ready", async () => {
     const source = "class Foo { }";
     const output = await prettier.format(source, {
-      parser: "nika-csharp",
+      parser: "dixie-csharp",
       plugins: [plugin]
     });
 

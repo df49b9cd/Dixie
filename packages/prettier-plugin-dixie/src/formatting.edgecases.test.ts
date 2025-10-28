@@ -13,7 +13,7 @@ public static class InterpolatedStrings {
 `;
 
     const result = await prettier.format(source, {
-      parser: "nika-csharp",
+      parser: "dixie-csharp",
       plugins: [plugin],
       printWidth: 100
     });
@@ -44,7 +44,7 @@ public partial class Demo{
 `;
 
     const result = await prettier.format(source, {
-      parser: "nika-csharp",
+      parser: "dixie-csharp",
       plugins: [plugin],
       printWidth: 80
     });

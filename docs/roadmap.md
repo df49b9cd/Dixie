@@ -1,4 +1,4 @@
-# Project Nika — Implementation Roadmap
+# Project Dixie — Implementation Roadmap
 
 > Time boxes are indicative and assume parallel effort across the TypeScript and .NET tracks.
 

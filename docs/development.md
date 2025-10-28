@@ -4,24 +4,24 @@
 
 - Node.js ≥ 22.21.0
 - npm ≥ 10
-- .NET SDK 9.0 preview (matching `src/Nika.Host`)
+- .NET SDK 9.0 preview (matching `src/Dixie.Host`)
 
-Run `npm install` followed by `dotnet restore src/Nika.Host` to hydrate both toolchains.
+Run `npm install` followed by `dotnet restore src/Dixie.Host` to hydrate both toolchains.
 
 ## Common Workflows
 
 - `npm run build` – builds every workspace (TypeScript output lands in `dist/`).
-- `npm run test --workspace prettier-plugin-nika` – builds the plugin then executes Vitest (integration tests spawn the Roslyn host).
-- `dotnet build src/Nika.Host` – compiles the host and restores Roslyn dependencies.
-- `npm run build:host` – publishes ReadyToRun binaries for each RID, syncs them into `packages/prettier-plugin-nika/bin/`, and refreshes `manifest.json`.
-- `npm run demo` – formats all C# fixtures with the built plugin so you can quickly inspect the output (`NIKA_DEMO_TIMEOUT_MS` controls the per-file timeout).
+- `npm run test --workspace prettier-plugin-dixie` – builds the plugin then executes Vitest (integration tests spawn the Roslyn host).
+- `dotnet build src/Dixie.Host` – compiles the host and restores Roslyn dependencies.
+- `npm run build:host` – publishes ReadyToRun binaries for each RID, syncs them into `packages/prettier-plugin-dixie/bin/`, and refreshes `manifest.json`.
+- `npm run demo` – formats all C# fixtures with the built plugin so you can quickly inspect the output (`DIXIE_DEMO_TIMEOUT_MS` controls the per-file timeout).
 
 ## Telemetry & Logging
 
-- Set `NIKA_LOG_LEVEL=debug` to surface client/host debug logs.
-- Optional JSON telemetry can be enabled by exporting `NIKA_TELEMETRY_FILE=/tmp/nika-telemetry.log`; every format request appends a line with timings, diagnostics, and range metadata.
-- Host binaries are validated during `npm install` by `scripts/postinstall.mjs`; set `NIKA_HOST_CACHE` to override where verified binaries are cached.
-- The host emits structured log notifications (level + context). When the process exceeds `NIKA_HOST_MEMORY_BUDGET_MB` (default 512MB) a warning is logged.
+- Set `DIXIE_LOG_LEVEL=debug` to surface client/host debug logs.
+- Optional JSON telemetry can be enabled by exporting `DIXIE_TELEMETRY_FILE=/tmp/dixie-telemetry.log`; every format request appends a line with timings, diagnostics, and range metadata.
+- Host binaries are validated during `npm install` by `scripts/postinstall.mjs`; set `DIXIE_HOST_CACHE` to override where verified binaries are cached.
+- The host emits structured log notifications (level + context). When the process exceeds `DIXIE_HOST_MEMORY_BUDGET_MB` (default 512MB) a warning is logged.
 
 ## VS Code Support
 
@@ -30,7 +30,7 @@ Run `npm install` followed by `dotnet restore src/Nika.Host` to hydrate both too
 
 ## Fixture Corpus
 
-- Format samples live in `packages/prettier-plugin-nika/fixtures`. They are used by snapshot tests (`fixtures.test.ts`) and the demo script.
+- Format samples live in `packages/prettier-plugin-dixie/fixtures`. They are used by snapshot tests (`fixtures.test.ts`) and the demo script.
   - Add new scenarios here when verifying tricky trivia or language features.
 
 ## Conventions

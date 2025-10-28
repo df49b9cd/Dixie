@@ -1,4 +1,4 @@
-# Contributing to Project Nika
+# Contributing to Project Dixie
 
 Thanks for helping build a Roslyn-powered Prettier plugin for C#! This guide explains how to get your environment ready, the workflows we follow, and the quality checks every change must pass.
 
@@ -6,20 +6,20 @@ Thanks for helping build a Roslyn-powered Prettier plugin for C#! This guide exp
 
 - Node.js ≥ 22.21.0 (LTS). Use a version manager such as `nvm` or `fnm` to switch quickly.
 - npm ≥ 10 (bundled with Node 22).
-- .NET SDK ≥ 9.0 preview (or whichever version matches `src/Nika.Host/Nika.Host.csproj`).
+- .NET SDK ≥ 9.0 preview (or whichever version matches `src/Dixie.Host/Dixie.Host.csproj`).
 - macOS, Windows, or Linux with the ability to run self-contained .NET executables.
 
 ## Repository Setup
 
 1. Install dependencies: `npm install`
    - The `prepare` script bootstraps Husky so Git hooks are ready after the first install.
-2. Build the TypeScript sources: `npm run build --workspace prettier-plugin-nika`
-3. Restore and build the Roslyn host: `dotnet build src/Nika.Host`
+2. Build the TypeScript sources: `npm run build --workspace prettier-plugin-dixie`
+3. Restore and build the Roslyn host: `dotnet build src/Dixie.Host`
 
 ## Development Workflow
 
 - Use feature branches; keep `main` releasable at all times.
-- Write TypeScript in `packages/prettier-plugin-nika/src` and C# in `src/Nika.Host`.
+- Write TypeScript in `packages/prettier-plugin-dixie/src` and C# in `src/Dixie.Host`.
 - Keep pull requests focused. Preferable size: under 500 LOC diff unless justified.
 - If your change touches the protocol, update `docs/protocol.md` with the new schema and version notes.
 
@@ -29,14 +29,14 @@ Thanks for helping build a Roslyn-powered Prettier plugin for C#! This guide exp
 - `npm run lint` — executes ESLint in every workspace with a lint script.
 - `npm run test` — runs Vitest (with integration coverage that exercises the host handshake).
 - `npm run build` — compiles all TypeScript packages.
-- `dotnet build src/Nika.Host` — builds the Roslyn host; required for integration tests.
+- `dotnet build src/Dixie.Host` — builds the Roslyn host; required for integration tests.
 
 ## Quality Gates
 
 - `npm run lint`
 - `npm run test`
 - `npm run build`
-- `dotnet build src/Nika.Host`
+- `dotnet build src/Dixie.Host`
 
 CI enforces the same commands. Run them locally before opening a PR.
 
@@ -73,6 +73,6 @@ CI enforces the same commands. Run them locally before opening a PR.
 
 ## Code of Conduct
 
-Project Nika follows the Contributor Covenant. Respectful communication and inclusive behavior are mandatory.
+Project Dixie follows the Contributor Covenant. Respectful communication and inclusive behavior are mandatory.
 
 Thank you for contributing!

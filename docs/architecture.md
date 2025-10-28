@@ -1,4 +1,4 @@
-# Project Nika Architecture
+# Project Dixie Architecture
 
 ## Vision
 
@@ -14,11 +14,11 @@
 
 ## Core Components
 
-- Prettier plugin (`packages/prettier-plugin-nika`).
+- Prettier plugin (`packages/prettier-plugin-dixie`).
   - TypeScript implementation compiled to CommonJS.
   - Exposes `languages`, `parsers`, `printers`, and minimal configuration surface.
   - Manages host process lifecycle, transports messages, and returns formatted code to Prettier.
-- Roslyn host (`src/Nika.Host`).
+- Roslyn host (`src/Dixie.Host`).
   - .NET console application targeting net9/net10 (TBD) with self-contained distribution.
   - Uses Roslyn syntax and workspace APIs to parse, format, and emit diagnostics.
   - Runs as a persistent process per Prettier invocation or editor session.
@@ -88,7 +88,7 @@
   - On fatal errors, plugin throws with actionable message instructing the user on remediation.
 - Configuration exposure:
   - Respect core Prettier options automatically.
-  - Consider minimal Nika-specific options (language version override, host binary path).
+  - Consider minimal Dixie-specific options (language version override, host binary path).
 
 ## Packaging and Distribution
 
@@ -100,7 +100,7 @@
 
 ## Operational Considerations
 
-- Logging: plugin emits debug logs behind `NIKA_LOG_LEVEL` env variable; host logs to stderr with correlation IDs.
+- Logging: plugin emits debug logs behind `DIXIE_LOG_LEVEL` env variable; host logs to stderr with correlation IDs.
 - Metrics: optional JSON log entries for timing allow downstream tooling to collect metrics.
 - Crash recovery: plugin auto-restarts host up to N attempts; beyond that, bubble failure to Prettier.
 - Update strategy: plugin checks host version mismatch and prompts for reinstall when incompatible.

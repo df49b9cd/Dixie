@@ -7,8 +7,8 @@ import { execa } from "execa";
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = resolve(__dirname, "..");
-const pluginRoot = resolve(projectRoot, "packages/prettier-plugin-nika");
-const hostProject = resolve(projectRoot, "src/Nika.Host/Nika.Host.csproj");
+const pluginRoot = resolve(projectRoot, "packages/prettier-plugin-dixie");
+const hostProject = resolve(projectRoot, "src/Dixie.Host/Dixie.Host.csproj");
 
 const targets = [
   { rid: "osx-arm64", output: "artifacts/osx-arm64" },
@@ -52,7 +52,7 @@ async function main() {
 
     const binDir = resolve(pluginRoot, "bin", target.rid);
     mkdirSync(binDir, { recursive: true });
-    const destName = process.platform === "win32" && target.rid.startsWith("win") ? "nika-host.exe" : "nika-host";
+    const destName = process.platform === "win32" && target.rid.startsWith("win") ? "dixie-host.exe" : "dixie-host";
     const destPath = join(binDir, destName);
     copyFileSync(binaryPath, destPath);
     if (!target.rid.startsWith("win")) {
@@ -80,7 +80,7 @@ function getPluginVersion() {
 
 function locateBinary(directory) {
   const files = readdirSync(directory);
-  const candidate = files.find((file) => file === "Nika.Host" || file === "Nika.Host.exe");
+  const candidate = files.find((file) => file === "Dixie.Host" || file === "Dixie.Host.exe");
   if (!candidate) {
     throw new Error(`Could not locate host binary in ${directory}`);
   }

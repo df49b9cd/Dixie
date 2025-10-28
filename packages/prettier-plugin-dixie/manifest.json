@@ -2,27 +2,27 @@
   "version": "0.0.1",
   "binaries": {
     "osx-arm64": {
-      "path": "bin/osx-arm64/nika-host",
+      "path": "bin/osx-arm64/dixie-host",
       "sha256": "3fe1be20677a4d2253d1383cbb978ef013f9753184a4072da654f75e715b683f",
       "size": 254341674
     },
     "osx-x64": {
-      "path": "bin/osx-x64/nika-host",
+      "path": "bin/osx-x64/dixie-host",
       "sha256": "0a467e52f7bd6b78fcbb90413f317e0d889d4c981abe7782ee95a4e14c688c3d",
       "size": 224565242
     },
     "linux-x64": {
-      "path": "bin/linux-x64/nika-host",
+      "path": "bin/linux-x64/dixie-host",
       "sha256": "2293ff8a868d82b4fbde664e2514cea4918d29d3d8772de23c8e195ee5faf940",
       "size": 223456104
     },
     "linux-arm64": {
-      "path": "bin/linux-arm64/nika-host",
+      "path": "bin/linux-arm64/dixie-host",
       "sha256": "45db9595cdcfbee9eb7821d85f45c5390fe5d34241631c3b68aa8c9aa5b2c458",
       "size": 253470602
     },
     "win-x64": {
-      "path": "bin/win-x64/nika-host",
+      "path": "bin/win-x64/dixie-host",
       "sha256": "ce9eb761f2749fe6aa851231b320c74321e5a3348634a12906acc1205b57b2b9",
       "size": 220400735
     }

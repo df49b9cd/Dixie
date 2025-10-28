@@ -6,9 +6,9 @@ import packageJson from "../package.json";
 import { encodeMessage, parseEnvelopes } from "./ipc";
 
 const CLIENT_VERSION = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
-const DEFAULT_HANDSHAKE_TIMEOUT_MS = getNumberEnv("NIKA_HANDSHAKE_TIMEOUT_MS", 5_000);
-const DEFAULT_REQUEST_TIMEOUT_MS = getNumberEnv("NIKA_REQUEST_TIMEOUT_MS", 8_000);
-const DEFAULT_RESTART_ATTEMPTS = getNumberEnv("NIKA_HOST_RETRIES", 2);
+const DEFAULT_HANDSHAKE_TIMEOUT_MS = getNumberEnv("DIXIE_HANDSHAKE_TIMEOUT_MS", 5_000);
+const DEFAULT_REQUEST_TIMEOUT_MS = getNumberEnv("DIXIE_REQUEST_TIMEOUT_MS", 8_000);
+const DEFAULT_RESTART_ATTEMPTS = getNumberEnv("DIXIE_HOST_RETRIES", 2);
 const MIN_RESPONSE_CAPACITY = 64 * 1024;
 
 type HostLaunchSpec = {
@@ -43,7 +43,7 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   error: 40
 };
 
-const CURRENT_LOG_LEVEL = normalizeLogLevel(process.env.NIKA_LOG_LEVEL ?? "warn");
+const CURRENT_LOG_LEVEL = normalizeLogLevel(process.env.DIXIE_LOG_LEVEL ?? "warn");
 
 type FormatRange = {
   start: number;
@@ -64,7 +64,7 @@ export class HostClient {
   private readonly handshakeTimeoutMs = DEFAULT_HANDSHAKE_TIMEOUT_MS;
   private readonly requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
   private readonly restartAttempts = Math.max(1, DEFAULT_RESTART_ATTEMPTS);
-  private readonly memoryBudgetMb = getNumberEnv("NIKA_HOST_MEMORY_BUDGET_MB", 512);
+  private readonly memoryBudgetMb = getNumberEnv("DIXIE_HOST_MEMORY_BUDGET_MB", 512);
   private memoryPressureHits = 0;
   private memoryPressureWarned = false;
   private memoryGuardHits = 0;
@@ -87,7 +87,7 @@ export class HostClient {
           attempt += 1;
           log(
             "warn",
-            `[nika] Host format attempt ${attempt}/${this.restartAttempts} failed: ${formatError(error)}`
+            `[dixie] Host format attempt ${attempt}/${this.restartAttempts} failed: ${formatError(error)}`
           );
           this.disposeWorker();
         }
@@ -178,7 +178,7 @@ export class HostClient {
             const message = typeof (diagnostic as { message?: string }).message === "string"
               ? (diagnostic as { message?: string }).message
               : "Host emitted diagnostic.";
-            log("warn", `[nika host][${severity}] ${message}`);
+            log("warn", `[dixie host][${severity}] ${message}`);
           }
         }
       }
@@ -228,17 +228,17 @@ export class HostClient {
         handshakeTimeoutMs: this.handshakeTimeoutMs,
         requestTimeoutMs: this.requestTimeoutMs,
         restartAttempts: this.restartAttempts,
-        logLevel: process.env.NIKA_LOG_LEVEL ?? "warn"
+        logLevel: process.env.DIXIE_LOG_LEVEL ?? "warn"
       }
     });
 
     worker.once("error", (error) => {
-      log("error", `[nika] Host worker error: ${formatError(error)}`);
+      log("error", `[dixie] Host worker error: ${formatError(error)}`);
       this.disposeWorker();
     });
 
     worker.once("exit", (code) => {
-      log("debug", `[nika] Host worker exited with code ${code}`);
+      log("debug", `[dixie] Host worker exited with code ${code}`);
       this.worker = null;
     });
 
@@ -255,11 +255,11 @@ export class HostClient {
       const shutdownMessage: WorkerMessage = { type: "shutdown" };
       this.worker.postMessage(shutdownMessage);
     } catch (error) {
-      log("debug", `[nika] Failed to send shutdown message to worker: ${formatError(error)}`);
+      log("debug", `[dixie] Failed to send shutdown message to worker: ${formatError(error)}`);
     }
 
     this.worker.terminate().catch((error) => {
-      log("debug", `[nika] Failed to terminate worker: ${formatError(error)}`);
+      log("debug", `[dixie] Failed to terminate worker: ${formatError(error)}`);
     });
 
     this.worker = null;
@@ -275,12 +275,12 @@ export class HostClient {
   }
 
   private handleFailure(source: string, cause: unknown): string {
-    if (process.env.NIKA_STRICT_HOST === "1") {
+    if (process.env.DIXIE_STRICT_HOST === "1") {
       throw cause instanceof Error ? cause : new Error(String(cause));
     }
 
     if (!this.warned) {
-      log("warn", `[nika] Falling back to original text: ${formatError(cause)}`);
+      log("warn", `[dixie] Falling back to original text: ${formatError(cause)}`);
       this.warned = true;
     }
 
@@ -298,8 +298,8 @@ export class HostClient {
       this.memoryPressureHits += 1;
       if (!this.memoryPressureWarned && this.memoryPressureHits >= 3) {
         const guidance = [
-          `[nika] Host working set peaked at ${workingSetMb.toFixed(1)} MB (budget ${this.memoryBudgetMb} MB).`,
-          "Consider increasing NIKA_HOST_MEMORY_BUDGET_MB or sharing telemetry via `npm run telemetry:report`."
+          `[dixie] Host working set peaked at ${workingSetMb.toFixed(1)} MB (budget ${this.memoryBudgetMb} MB).`,
+          "Consider increasing DIXIE_HOST_MEMORY_BUDGET_MB or sharing telemetry via `npm run telemetry:report`."
         ].join(" ");
         log("warn", guidance);
         this.memoryPressureWarned = true;
@@ -317,8 +317,8 @@ export class HostClient {
     this.memoryGuardHits += 1;
     if (!this.memoryGuardWarned && this.memoryGuardHits >= 3) {
       const message = [
-        "[nika] Host exceeded its memory budget multiple times.",
-        "Raise NIKA_HOST_MEMORY_BUDGET_MB or capture telemetry (npm run telemetry:report) and open an issue."
+        "[dixie] Host exceeded its memory budget multiple times.",
+        "Raise DIXIE_HOST_MEMORY_BUDGET_MB or capture telemetry (npm run telemetry:report) and open an issue."
       ].join(" ");
       log("warn", message);
       this.memoryGuardWarned = true;
@@ -375,7 +375,7 @@ function findWorkerScript(): string {
 }
 
 function resolveHostLaunchSpec(): HostLaunchSpec {
-  const explicitPath = process.env.NIKA_HOST_PATH;
+  const explicitPath = process.env.DIXIE_HOST_PATH;
   if (explicitPath) {
     return createLaunchSpec(explicitPath);
   }
@@ -384,11 +384,11 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
   const repoRoot = path.resolve(packageRoot, "..", "..");
   const configurations = ["Debug", "Release"];
   const frameworks = ["net9.0", "net8.0"];
-  const binaries = ["Nika.Host", "Nika.Host.dll"];
+  const binaries = ["Dixie.Host", "Dixie.Host.dll"];
 
   for (const configuration of configurations) {
     for (const framework of frameworks) {
-      const directory = path.join(repoRoot, "src", "Nika.Host", "bin", configuration, framework);
+      const directory = path.join(repoRoot, "src", "Dixie.Host", "bin", configuration, framework);
 
       for (const binary of binaries) {
         const candidate = path.join(directory, binary);
@@ -399,7 +399,7 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
     }
   }
 
-  throw new Error("Unable to locate Nika host binary. Set NIKA_HOST_PATH to override detection.");
+  throw new Error("Unable to locate Dixie host binary. Set DIXIE_HOST_PATH to override detection.");
 }
 
 function createLaunchSpec(filePath: string): HostLaunchSpec {
@@ -475,7 +475,7 @@ type TelemetryPayload = {
 };
 
 function recordTelemetry(payload: TelemetryPayload): void {
-  const telemetryFile = process.env.NIKA_TELEMETRY_FILE;
+  const telemetryFile = process.env.DIXIE_TELEMETRY_FILE;
   if (!telemetryFile) {
     return;
   }
@@ -498,7 +498,7 @@ function recordTelemetry(payload: TelemetryPayload): void {
   try {
     appendFileSync(telemetryFile, `${JSON.stringify(entry)}\n`, { encoding: "utf8" });
   } catch (error) {
-    log("debug", `[nika] telemetry write failed: ${formatError(error)}`);
+    log("debug", `[dixie] telemetry write failed: ${formatError(error)}`);
   }
 }
 

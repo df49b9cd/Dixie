@@ -9,29 +9,29 @@
 ## Proposed Layout
 
 ```
-packages/prettier-plugin-nika/
+packages/prettier-plugin-dixie/
   bin/
-    <platform>/nika-host
+    <platform>/dixie-host
     manifest.json         # sha256 + size + version metadata
   scripts/
     postinstall.mjs       # downloads missing binaries, verifies checksum
 ```
 
-The npm tarball ships with the `bin/` directory populated for common platforms. During `postinstall`, we validate the requested binary against the manifest and download it only when missing, storing cached copies in `~/.cache/nika/<version>/<platform>/`.
+The npm tarball ships with the `bin/` directory populated for common platforms. During `postinstall`, we validate the requested binary against the manifest and download it only when missing, storing cached copies in `~/.cache/dixie/<version>/<platform>/`.
 
 ## Host Build Automation
 
 Add a `dotnet publish` script that targets each RID:
 
 ```
-dotnet publish src/Nika.Host \
+dotnet publish src/Dixie.Host \
   -c Release \
   -r osx-arm64 --self-contained true --property:PublishReadyToRun=true --output artifacts/osx-arm64
 ```
 
 Repeat for `osx-x64`, `win-x64`, `linux-x64`, `linux-arm64`.
 
-These commands run in CI and drop zipped outputs (`nika-host-<platform>.zip`).
+These commands run in CI and drop zipped outputs (`dixie-host-<platform>.zip`).
 
 ## Manifest Format
 
@@ -40,7 +40,7 @@ These commands run in CI and drop zipped outputs (`nika-host-<platform>.zip`).
   "version": "0.1.0",
   "binaries": {
     "darwin-arm64": {
-      "path": "bin/darwin-arm64/nika-host",
+      "path": "bin/darwin-arm64/dixie-host",
       "sha256": "…",
       "size": 12345678
     },

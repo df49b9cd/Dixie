@@ -247,7 +247,7 @@ class WorkerHostClient {
       const { severity = "recoverable", errorCode, message, details } = parsed.data;
       const prefix = errorCode ? `${errorCode}: ` : "";
       const suffix = details ? ` ${JSON.stringify(details)}` : "";
-      const composed = `[nika host] ${prefix}${message}${suffix}`;
+      const composed = `[dixie host] ${prefix}${message}${suffix}`;
 
       log(severity === "fatal" ? "error" : "warn", composed);
 
@@ -269,7 +269,7 @@ class WorkerHostClient {
 
       const level = normalizeLogLevel(parsed.data.level ?? "info");
       const context = parsed.data.context ? ` ${JSON.stringify(parsed.data.context)}` : "";
-      log(level, `[nika host] ${parsed.data.message}${context}`);
+      log(level, `[dixie host] ${parsed.data.message}${context}`);
     }
   };
 

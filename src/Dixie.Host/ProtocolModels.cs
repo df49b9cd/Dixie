@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Nika.Host;
+namespace Dixie.Host;
 
 public static class ProtocolModels
 {

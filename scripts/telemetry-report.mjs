@@ -3,11 +3,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
-const inputPath = args[0] ?? process.env.NIKA_TELEMETRY_FILE;
+const inputPath = args[0] ?? process.env.DIXIE_TELEMETRY_FILE;
 
 if (!inputPath) {
   console.error("Usage: node scripts/telemetry-report.mjs <telemetry-file>");
-  console.error("       or set NIKA_TELEMETRY_FILE=/path/to/log.jsonl");
+  console.error("       or set DIXIE_TELEMETRY_FILE=/path/to/log.jsonl");
   process.exit(1);
 }
 
@@ -18,13 +18,13 @@ async function main() {
   try {
     raw = await readFile(resolvedPath, "utf8");
   } catch (error) {
-    console.error(`[nika] Failed to read telemetry file: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[dixie] Failed to read telemetry file: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 
   const entries = parseTelemetry(raw);
   if (entries.length === 0) {
-    console.log(`[nika] No telemetry entries found in ${resolvedPath}.`);
+    console.log(`[dixie] No telemetry entries found in ${resolvedPath}.`);
     return;
   }
 
@@ -48,7 +48,7 @@ function parseTelemetry(raw) {
       }
     } catch (error) {
       console.warn(
-        `[nika] Skipping invalid telemetry line: ${error instanceof Error ? error.message : String(error)}`
+        `[dixie] Skipping invalid telemetry line: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -79,7 +79,7 @@ function printSummary(resolvedPath, entries) {
   const guardTrips = failures.filter((entry) => entry.errorCode === "MEMORY_BUDGET_EXCEEDED").length;
   const errorCounts = countBy(failures.map((entry) => entry.errorCode ?? entry.error ?? "unknown"));
 
-  console.log(`\n[nika] Telemetry summary for ${resolvedPath}`);
+  console.log(`\n[dixie] Telemetry summary for ${resolvedPath}`);
   console.log("------------------------------------------------------------");
   console.log(`Entries: ${entries.length} (${successes.length} successes, ${failures.length} failures)`);
   console.log(`Configured memory budget: ${memoryBudgetMb} MB`);
@@ -122,7 +122,7 @@ function printSummary(resolvedPath, entries) {
     console.log(`\nMemory guard trips recorded: ${guardTrips}`);
   }
 
-  console.log("\n[nika] Analysis complete.");
+  console.log("\n[dixie] Analysis complete.");
 }
 
 function toNumber(value) {
@@ -183,6 +183,6 @@ function formatNumber(value) {
 }
 
 main().catch((error) => {
-  console.error(`[nika] Telemetry analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`[dixie] Telemetry analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

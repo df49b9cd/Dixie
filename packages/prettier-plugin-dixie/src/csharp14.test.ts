@@ -35,7 +35,7 @@ describe("C# 14 syntax (preview)", () => {
 }`;
 
     const result = await prettier.format(source, {
-      parser: "nika-csharp",
+      parser: "dixie-csharp",
       plugins: [plugin],
       printWidth: 70
     });

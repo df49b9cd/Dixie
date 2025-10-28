@@ -80,7 +80,7 @@ describe("fixtures", () => {
     it(`formats ${file} deterministically`, async () => {
       const source = fs.readFileSync(path.join(fixturesDir, file), "utf8");
       const result = await prettier.format(source, {
-        parser: "nika-csharp",
+        parser: "dixie-csharp",
         plugins: [plugin],
         printWidth: 100
       });

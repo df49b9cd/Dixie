@@ -1,22 +1,22 @@
 import type { Plugin, Printer, SupportLanguage } from "prettier";
 import { hostClient, type FormattingOptions } from "./host-client";
 
-type NikaAst = {
-  kind: "nika-placeholder";
+type DixieAst = {
+  kind: "dixie-placeholder";
   originalText: string;
 };
 
 const languages: SupportLanguage[] = [
   {
     name: "C#",
-    parsers: ["nika-csharp"],
+    parsers: ["dixie-csharp"],
     extensions: [".cs"],
     linguistLanguageId: 101,
     vscodeLanguageIds: ["csharp"]
   }
 ];
 
-const printer: Printer<NikaAst> = {
+const printer: Printer<DixieAst> = {
   print(path, options) {
     const node = path.getValue();
     if (!node) {
@@ -29,23 +29,23 @@ const printer: Printer<NikaAst> = {
   }
 };
 
-const plugin: Plugin<NikaAst> = {
+const plugin: Plugin<DixieAst> = {
   languages,
   parsers: {
-    "nika-csharp": {
+    "dixie-csharp": {
       parse(text) {
         return {
-          kind: "nika-placeholder",
+          kind: "dixie-placeholder",
           originalText: text
-        } satisfies NikaAst;
+        } satisfies DixieAst;
       },
-      astFormat: "nika-csharp",
+      astFormat: "dixie-csharp",
       locStart: () => 0,
       locEnd: (node) => node.originalText.length
     }
   },
   printers: {
-    "nika-csharp": printer
+    "dixie-csharp": printer
   }
 };
 
@@ -61,7 +61,7 @@ if (typeof module !== "undefined") {
   }
 }
 
-function resolveFormattingOptions(options: Parameters<Printer<NikaAst>["print"]>[1]): FormattingOptions {
+function resolveFormattingOptions(options: Parameters<Printer<DixieAst>["print"]>[1]): FormattingOptions {
   const printWidth = typeof options.printWidth === "number" && Number.isFinite(options.printWidth)
     ? Math.max(40, Math.trunc(options.printWidth))
     : 80;
@@ -76,7 +76,7 @@ function resolveFormattingOptions(options: Parameters<Printer<NikaAst>["print"]>
   return { printWidth, tabWidth, useTabs, endOfLine };
 }
 
-function resolveRange(text: string, options: Parameters<Printer<NikaAst>["print"]>[1]) {
+function resolveRange(text: string, options: Parameters<Printer<DixieAst>["print"]>[1]) {
   const rawStart = typeof options.rangeStart === "number" && Number.isFinite(options.rangeStart)
     ? Math.max(0, Math.trunc(options.rangeStart))
     : 0;

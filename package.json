@@ -1,13 +1,13 @@
 {
-  "name": "nika",
+  "name": "dixie",
   "private": true,
   "version": "0.1.0",
   "description": "Prettier plugin for C# backed by a Roslyn host",
-  "author": "Project Nika contributors",
+  "author": "Project Dixie contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://example.com/nika.git"
+    "url": "https://example.com/dixie.git"
   },
   "engines": {
     "node": ">=22.21.0"
@@ -18,9 +18,9 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "prepare": "husky",
-    "demo": "npm run demo --workspace prettier-plugin-nika",
+    "demo": "npm run demo --workspace prettier-plugin-dixie",
     "build:host": "node scripts/build-host.mjs",
-    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-nika",
+    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-dixie",
     "telemetry:report": "node scripts/telemetry-report.mjs"
   },
   "workspaces": [
@@ -34,6 +34,6 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,cs}": "prettier --write",
-    "packages/prettier-plugin-nika/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-nika -- --max-warnings=0"
+    "packages/prettier-plugin-dixie/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-dixie -- --max-warnings=0"
   }
 }

@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CSharp.Formatting;
 using Microsoft.CodeAnalysis.Options;
-using Nika.Host;
+using Dixie.Host;
 
 const int ProtocolVersion = 1;
 const double DefaultMemoryBudgetMb = 512;
@@ -403,10 +403,10 @@ static FormatResult FormatWithRoslyn(string content, FormattingRequestOptions op
     var projectId = ProjectId.CreateNewId();
     var documentId = DocumentId.CreateNewId(projectId);
     var solution = workspace.CurrentSolution
-        .AddProject(projectId, "Nika.Format", "Nika.Format", LanguageNames.CSharp)
+        .AddProject(projectId, "Dixie.Format", "Dixie.Format", LanguageNames.CSharp)
         .WithProjectCompilationOptions(projectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
         .WithProjectParseOptions(projectId, parseOptions)
-        .AddDocument(documentId, "nika.cs", SourceText.From(content, Encoding.UTF8));
+        .AddDocument(documentId, "dixie.cs", SourceText.From(content, Encoding.UTF8));
 
     var document = solution.GetDocument(documentId) ?? throw new InvalidOperationException("Failed to create Roslyn document.");
 
@@ -588,7 +588,7 @@ static void SendLogNotification(Stream stdout, Encoding encoding, string level, 
 
 static double GetMemoryBudgetMb()
 {
-    var value = Environment.GetEnvironmentVariable("NIKA_HOST_MEMORY_BUDGET_MB");
+    var value = Environment.GetEnvironmentVariable("DIXIE_HOST_MEMORY_BUDGET_MB");
     if (double.TryParse(value, out var parsed) && parsed > 0)
     {
         return parsed;

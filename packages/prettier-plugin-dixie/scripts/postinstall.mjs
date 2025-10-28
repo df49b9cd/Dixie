@@ -27,13 +27,13 @@ async function main() {
   const skipSmoke = args.has("--skip-smoke");
 
   if (smokeOnly && skipSmoke) {
-    console.warn("[nika] Conflicting flags: --smoke-only and --skip-smoke. Skipping.");
+    console.warn("[dixie] Conflicting flags: --smoke-only and --skip-smoke. Skipping.");
     return;
   }
 
   const platformKey = hostPlatformMap[process.platform];
   if (!platformKey) {
-    console.warn(`[nika] Unsupported platform ${process.platform}; skipping host download.`);
+    console.warn(`[dixie] Unsupported platform ${process.platform}; skipping host download.`);
     return;
   }
 
@@ -42,7 +42,7 @@ async function main() {
     typeof manifest.version === "string" ? manifest.version : String(manifest.version ?? "0.0.0");
   const entry = manifest.binaries?.[platformKey];
   if (!entry) {
-    console.warn(`[nika] No manifest entry for ${platformKey}; install the host manually (set NIKA_HOST_PATH).`);
+    console.warn(`[dixie] No manifest entry for ${platformKey}; install the host manually (set DIXIE_HOST_PATH).`);
     return;
   }
 
@@ -50,13 +50,13 @@ async function main() {
   let hostReady = false;
 
   if (!smokeOnly && await verifyChecksum(hostPath, entry.sha256)) {
-    console.log(`[nika] Host binary already present for ${platformKey}.`);
+    console.log(`[dixie] Host binary already present for ${platformKey}.`);
     hostReady = true;
   }
 
   if (!smokeOnly) {
     const cacheHome = path.join(
-      process.env.NIKA_HOST_CACHE ?? path.join(process.env.HOME ?? process.cwd(), ".cache/nika"),
+      process.env.DIXIE_HOST_CACHE ?? path.join(process.env.HOME ?? process.cwd(), ".cache/dixie"),
       manifestVersion,
       platformKey
     );
@@ -69,20 +69,20 @@ async function main() {
       } else {
         if (!entry.url) {
           console.warn(
-            `[nika] Host binary is missing and manifest lacks download url. Run npm run build:host.`
+            `[dixie] Host binary is missing and manifest lacks download url. Run npm run build:host.`
           );
           return;
         }
 
         mkdirSync(cacheHome, { recursive: true });
-        console.log(`[nika] Downloading host from ${entry.url}`);
+        console.log(`[dixie] Downloading host from ${entry.url}`);
         const { stdout } = await execa("curl", ["-sSL", entry.url, "-o", cachedPath]);
         if (stdout) {
           console.log(stdout);
         }
 
         if (!(await verifyChecksum(cachedPath, entry.sha256))) {
-          throw new Error(`[nika] Downloaded binary failed checksum for ${platformKey}.`);
+          throw new Error(`[dixie] Downloaded binary failed checksum for ${platformKey}.`);
         }
 
         copyFile(cachedPath, hostPath);
@@ -93,17 +93,17 @@ async function main() {
     hostReady = existsSync(hostPath);
     if (!hostReady) {
       throw new Error(
-        `[nika] --smoke-only requested but host binary not found at ${hostPath}. Run npm run build:host.`
+        `[dixie] --smoke-only requested but host binary not found at ${hostPath}. Run npm run build:host.`
       );
     }
   }
 
   if (!hostReady) {
-    console.warn(`[nika] Unable to prepare host binary for ${platformKey}; skipping smoke test.`);
+    console.warn(`[dixie] Unable to prepare host binary for ${platformKey}; skipping smoke test.`);
     return;
   }
 
-  if (skipSmoke || process.env.NIKA_POSTINSTALL_SKIP_SMOKE === "1") {
+  if (skipSmoke || process.env.DIXIE_POSTINSTALL_SKIP_SMOKE === "1") {
     return;
   }
 
@@ -126,14 +126,14 @@ function copyFile(src, dest) {
   const data = readFileSync(src);
   writeFileSync(dest, data, { mode: 0o755 });
   chmodSync(dest, 0o755);
-  console.log(`[nika] Host ready at ${dest}`);
+  console.log(`[dixie] Host ready at ${dest}`);
 }
 
 async function runSmokeTest(hostPath, manifestVersion, platformKey) {
   let child;
 
   try {
-    console.log(`[nika] Running host smoke test for ${platformKey}.`);
+    console.log(`[dixie] Running host smoke test for ${platformKey}.`);
     child = execa(hostPath, [], {
       stdin: "pipe",
       stdout: "pipe",
@@ -149,9 +149,9 @@ async function runSmokeTest(hostPath, manifestVersion, platformKey) {
 
     stdout.setEncoding("utf8");
     stderr?.setEncoding("utf8");
-    if (process.env.NIKA_POSTINSTALL_DEBUG === "1") {
+    if (process.env.DIXIE_POSTINSTALL_DEBUG === "1") {
       stderr?.on("data", (chunk) => {
-        process.stderr.write(`[nika host stderr] ${chunk}`);
+        process.stderr.write(`[dixie host stderr] ${chunk}`);
       });
     }
 
@@ -192,7 +192,7 @@ async function runSmokeTest(hostPath, manifestVersion, platformKey) {
         ? payload.hostVersion
         : "unknown";
 
-    console.log(`[nika] Host responded with version ${hostVersion}.`);
+    console.log(`[dixie] Host responded with version ${hostVersion}.`);
 
     const shutdownRequestId = `${initializeRequestId}-shutdown`;
     await writeEnvelope(stdin, {
@@ -219,11 +219,11 @@ async function runSmokeTest(hostPath, manifestVersion, platformKey) {
       throw new Error(`Host exited with non-zero code ${code}.`);
     }
 
-    console.log("[nika] Host smoke test completed successfully.");
+    console.log("[dixie] Host smoke test completed successfully.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[nika] Host smoke test failed: ${message}`);
-    if (process.env.NIKA_POSTINSTALL_STRICT === "1") {
+    console.warn(`[dixie] Host smoke test failed: ${message}`);
+    if (process.env.DIXIE_POSTINSTALL_STRICT === "1") {
       throw error instanceof Error ? error : new Error(message);
     }
   } finally {
@@ -384,5 +384,5 @@ function extractFrame(buffer) {
 }
 
 main().catch((error) => {
-  console.warn(`[nika] postinstall warning: ${error instanceof Error ? error.message : String(error)}`);
+  console.warn(`[dixie] postinstall warning: ${error instanceof Error ? error.message : String(error)}`);
 });

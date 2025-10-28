@@ -14,7 +14,7 @@
 
 ## Telemetry Plan
 
-- Opt-in environment variable: `NIKA_TELEMETRY_FILE` (local), future `NIKA_TELEMETRY_ENDPOINT` for anonymized metrics.
+- Opt-in environment variable: `DIXIE_TELEMETRY_FILE` (local), future `DIXIE_TELEMETRY_ENDPOINT` for anonymized metrics.
 - Data points: format duration, diagnostics count, host restarts.
 - Document privacy stance (no source code or identifiers sent).
 
