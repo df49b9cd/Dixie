@@ -12,6 +12,7 @@
     "node": ">=22.21.0"
   },
   "scripts": {
+    "pretest": "dotnet build ../../src/Dixie.Host/Dixie.Host.csproj -c Debug",
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
