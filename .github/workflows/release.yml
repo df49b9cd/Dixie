@@ -18,7 +18,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      PACKAGE_DIR: packages/prettier-plugin-dixie
+      PACKAGE_DIR: packages/prettier-plugin-csharp
 
     steps:
       - name: Checkout

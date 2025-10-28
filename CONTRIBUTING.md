@@ -13,13 +13,13 @@ Thanks for helping build a Roslyn-powered Prettier plugin for C#! This guide exp
 
 1. Install dependencies: `npm install`
    - The `prepare` script bootstraps Husky so Git hooks are ready after the first install.
-2. Build the TypeScript sources: `npm run build --workspace prettier-plugin-dixie`
+2. Build the TypeScript sources: `npm run build --workspace prettier-plugin-csharp`
 3. Restore and build the Roslyn host: `dotnet build src/Dixie.Host`
 
 ## Development Workflow
 
 - Use feature branches; keep `main` releasable at all times.
-- Write TypeScript in `packages/prettier-plugin-dixie/src` and C# in `src/Dixie.Host`.
+- Write TypeScript in `packages/prettier-plugin-csharp/src` and C# in `src/Dixie.Host`.
 - Keep pull requests focused. Preferable size: under 500 LOC diff unless justified.
 - If your change touches the protocol, update `docs/protocol.md` with the new schema and version notes.
 

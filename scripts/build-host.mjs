@@ -7,7 +7,7 @@ import { execa } from "execa";
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = resolve(__dirname, "..");
-const pluginRoot = resolve(projectRoot, "packages/prettier-plugin-dixie");
+const pluginRoot = resolve(projectRoot, "packages/prettier-plugin-csharp");
 const hostProject = resolve(projectRoot, "src/Dixie.Host/Dixie.Host.csproj");
 
 const targets = [

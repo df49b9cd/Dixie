@@ -9,7 +9,7 @@
 ## Proposed Layout
 
 ```
-packages/prettier-plugin-dixie/
+packages/prettier-plugin-csharp/
   bin/
     <platform>/dixie-host
     manifest.json         # sha256 + size + version metadata

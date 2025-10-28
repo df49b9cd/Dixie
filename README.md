@@ -14,14 +14,14 @@ Additional docs:
 
 ## Packages
 
-- `packages/prettier-plugin-dixie`: JavaScript bridge that integrates with Prettier and forwards formatting requests to the host.
+- `packages/prettier-plugin-csharp`: JavaScript bridge that integrates with Prettier and forwards formatting requests to the host.
 - `src/Dixie.Host`: .NET console application that will expose formatting via Roslyn.
 
 ## Development
 
 1. Ensure Node.js LTS (>=22.21.0) is installed.
 2. Install dependencies with npm: `npm install`.
-3. Build the plugin: `npm run build --workspace prettier-plugin-dixie`.
+3. Build the plugin: `npm run build --workspace prettier-plugin-csharp`.
 4. Restore the .NET host: `dotnet restore src/Dixie.Host`.
 5. (Optional) Produce self-contained host binaries for packaging: `npm run build:host`.
 6. Run the demo formatter over the sample corpus: `npm run demo`.
@@ -36,4 +36,4 @@ During `npm install`, the plugin verifies the bundled host binary using `manifes
 - `DIXIE_HOST_PATH` — explicit path to a host binary (helpful for air-gapped environments or locally built snapshots).
 - `DIXIE_TELEMETRY_FILE` — opt-in JSON lines log for format metrics; leave unset to disable.
 
-To ship updated binaries as part of a release run `npm run build:host`; the script refreshes `packages/prettier-plugin-dixie/bin/` and the manifest with new checksums.
+To ship updated binaries as part of a release run `npm run build:host`; the script refreshes `packages/prettier-plugin-csharp/bin/` and the manifest with new checksums.

@@ -11,9 +11,9 @@ Run `npm install` followed by `dotnet restore src/Dixie.Host` to hydrate both to
 ## Common Workflows
 
 - `npm run build` – builds every workspace (TypeScript output lands in `dist/`).
-- `npm run test --workspace prettier-plugin-dixie` – builds the plugin then executes Vitest (integration tests spawn the Roslyn host).
+- `npm run test --workspace prettier-plugin-csharp` – builds the plugin then executes Vitest (integration tests spawn the Roslyn host).
 - `dotnet build src/Dixie.Host` – compiles the host and restores Roslyn dependencies.
-- `npm run build:host` – publishes ReadyToRun binaries for each RID, syncs them into `packages/prettier-plugin-dixie/bin/`, and refreshes `manifest.json`.
+- `npm run build:host` – publishes ReadyToRun binaries for each RID, syncs them into `packages/prettier-plugin-csharp/bin/`, and refreshes `manifest.json`.
 - `npm run demo` – formats all C# fixtures with the built plugin so you can quickly inspect the output (`DIXIE_DEMO_TIMEOUT_MS` controls the per-file timeout).
 
 ## Telemetry & Logging
@@ -30,7 +30,7 @@ Run `npm install` followed by `dotnet restore src/Dixie.Host` to hydrate both to
 
 ## Fixture Corpus
 
-- Format samples live in `packages/prettier-plugin-dixie/fixtures`. They are used by snapshot tests (`fixtures.test.ts`) and the demo script.
+- Format samples live in `packages/prettier-plugin-csharp/fixtures`. They are used by snapshot tests (`fixtures.test.ts`) and the demo script.
   - Add new scenarios here when verifying tricky trivia or language features.
 
 ## Conventions
