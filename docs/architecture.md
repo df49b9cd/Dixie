@@ -14,7 +14,7 @@
 
 ## Core Components
 
-- Prettier plugin (`packages/prettier-plugin-c-sharp`).
+- Prettier plugin (`packages/prettier-plugin-csharp`).
   - TypeScript implementation compiled to CommonJS.
   - Exposes `languages`, `parsers`, `printers`, and minimal configuration surface.
   - Manages host process lifecycle, transports messages, and returns formatted code to Prettier.

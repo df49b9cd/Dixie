@@ -18,9 +18,9 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "prepare": "husky",
-    "demo": "npm run demo --workspace prettier-plugin-c-sharp",
+    "demo": "npm run demo --workspace @df49b9cd/prettier-plugin-csharp",
     "build:host": "node scripts/build-host.mjs",
-    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-c-sharp",
+    "ci:smoke": "npm run build:host && npm run smoke:host --workspace @df49b9cd/prettier-plugin-csharp",
     "telemetry:report": "node scripts/telemetry-report.mjs"
   },
   "workspaces": [
@@ -34,6 +34,6 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,cs}": "prettier --write",
-    "packages/prettier-plugin-c-sharp/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-c-sharp -- --max-warnings=0"
+    "packages/prettier-plugin-csharp/src/**/*.{ts,tsx}": "npm run lint --workspace @df49b9cd/prettier-plugin-csharp -- --max-warnings=0"
   }
 }

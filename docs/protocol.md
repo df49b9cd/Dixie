@@ -200,7 +200,7 @@ Content-Length: <byte-length>\r\n
 
 - JSON schema validation for each command (TS `zod` definitions, C# `JsonSerializer` attributes).
 - Reference implementations:
-  - TypeScript schema (`packages/prettier-plugin-c-sharp/src/protocol.ts`) exposes `zod` models consumed by the plugin.
+  - TypeScript schema (`packages/prettier-plugin-csharp/src/protocol.ts`) exposes `zod` models consumed by the plugin.
   - C# record models (`src/Dixie.Host/ProtocolModels.cs`) ensure host-side handlers deserialize with full type coverage.
 - Golden request/response fixtures under `tests/protocol`.
 - Integration tests simulate timeouts, malformed payloads, and host restarts.

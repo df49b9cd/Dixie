@@ -1,5 +1,5 @@
 {
-  "name": "prettier-plugin-c-sharp",
+  "name": "@df49b9cd/prettier-plugin-csharp",
   "version": "0.2.1",
   "description": "Prettier plugin for C# powered by Roslyn",
   "main": "dist/index.cjs",
