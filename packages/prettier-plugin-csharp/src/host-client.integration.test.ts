@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
-import { execa } from "execa";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { HostClient } from "./host-client";
@@ -11,13 +11,18 @@ describe("HostClient integration", () => {
   let originalHostPath: string | undefined;
   let resolvedHostPath: string;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     originalHostPath = process.env.DIXIE_HOST_PATH;
 
-    await execa("dotnet", ["build", hostProjectPath], {
+    const buildResult = spawnSync("dotnet", ["build", hostProjectPath], {
       cwd: repoRoot,
-      env: process.env
+      env: process.env,
+      stdio: "inherit"
     });
+
+    if (buildResult.status !== 0) {
+      throw new Error(`dotnet build failed with status ${buildResult.status ?? "null"}.`);
+    }
 
     const buildRoot = path.resolve(hostProjectPath, "bin", "Debug", "net9.0");
 

@@ -98,3 +98,8 @@ function resolveRange(text: string, options: Parameters<Printer<DixieAst>["print
     end: clampedEnd
   };
 }
+
+export const __testing = {
+  resolveFormattingOptions,
+  resolveRange
+};
