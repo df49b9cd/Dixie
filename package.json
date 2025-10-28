@@ -1,7 +1,7 @@
 {
   "name": "dixie",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Prettier plugin for C# backed by a Roslyn host",
   "author": "Project Dixie contributors",
   "license": "MIT",
@@ -18,9 +18,9 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "prepare": "husky",
-    "demo": "npm run demo --workspace prettier-plugin-csharp",
+    "demo": "npm run demo --workspace prettier-plugin-c-sharp",
     "build:host": "node scripts/build-host.mjs",
-    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-csharp",
+    "ci:smoke": "npm run build:host && npm run smoke:host --workspace prettier-plugin-c-sharp",
     "telemetry:report": "node scripts/telemetry-report.mjs"
   },
   "workspaces": [
@@ -34,6 +34,6 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,cs}": "prettier --write",
-    "packages/prettier-plugin-csharp/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-csharp -- --max-warnings=0"
+    "packages/prettier-plugin-c-sharp/src/**/*.{ts,tsx}": "npm run lint --workspace prettier-plugin-c-sharp -- --max-warnings=0"
   }
 }

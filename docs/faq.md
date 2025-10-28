@@ -15,7 +15,7 @@ Yes. Use the VS Code launch configurations under `.vscode/launch.json` to run Vi
 
 ## Where are sample files stored?
 
-- See `packages/prettier-plugin-csharp/fixtures` for canonical formatting examples.
+- See `packages/prettier-plugin-c-sharp/fixtures` for canonical formatting examples.
 - Snapshot tests keep the formatted output guarded in CI (`fixtures.test.ts`).
 
 ## How do I report log output from the host?
@@ -24,7 +24,7 @@ Yes. Use the VS Code launch configurations under `.vscode/launch.json` to run Vi
 
 ## How can I verify the packaged binaries?
 
-- After `npm run build:host`, inspect `packages/prettier-plugin-csharp/manifest.json` for SHA-256 hashes and sizes.
+- After `npm run build:host`, inspect `packages/prettier-plugin-c-sharp/manifest.json` for SHA-256 hashes and sizes.
 - During `npm install`, the `postinstall.mjs` script validates the checksum before marking the host ready.
 - Use `shasum -a 256 bin/<rid>/dixie-host` to manually validate the bundled binary matches the manifest entry.
 
