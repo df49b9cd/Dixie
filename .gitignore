@@ -3,7 +3,6 @@ dist/
 packages/**/dist/
 packages/prettier-plugin-csharp/demo-output/
 packages/prettier-plugin-csharp/bin/
-packages/prettier-plugin-csharp/host-archives/
 artifacts/
 yarn.lock
 *.user

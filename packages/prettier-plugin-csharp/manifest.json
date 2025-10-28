@@ -1,45 +1,45 @@
 {
-  "version": "0.2.5",
+  "version": "0.2.6",
   "binaries": {
     "osx-arm64": {
       "path": "bin/osx-arm64/dixie-host",
-      "sha256": "0d31a59a61e0eb0ead38da899ab9c3448c4ff846fff0a299e0e735c22104ade8",
+      "sha256": "dbb95c974df5503d75a9a724e0bbb69aa0ddef112ec0e2eaacd83ea2bffdd3c4",
       "size": 254356155,
       "archivePath": "host-archives/osx-arm64/dixie-host.gz",
-      "archiveSha256": "d8901a2d34e08d808959ab0aee2aa2a91407327f14a4d06587208fed1469810f",
-      "archiveSize": 85328089
+      "archiveSha256": "82e55cef24fb218fdc376757b334263febc30b886a9c2a2b538abe02319abefd",
+      "archiveSize": 87606281
     },
     "osx-x64": {
       "path": "bin/osx-x64/dixie-host",
-      "sha256": "5199f69de0c0aee00a41439667b99e87e0060ad32ad073164db1298acf1aabdc",
+      "sha256": "73a990a8638553de4738d27222d057e3740622c39c8f37592060b49fdca7db17",
       "size": 224578155,
       "archivePath": "host-archives/osx-x64/dixie-host.gz",
-      "archiveSha256": "e24c38e9c581e3369d1bbbd0c9150d8ff8c8510fb09bedc9105148b314eff95a",
-      "archiveSize": 90881200
+      "archiveSha256": "15bbb70d035f74721706da810f3f40d439353e9d78f804e87733089571c6e1b0",
+      "archiveSize": 93986145
     },
     "linux-x64": {
       "path": "bin/linux-x64/dixie-host",
-      "sha256": "a6fc373b4c346443a19e3038172806b0211cff26265581e9a75097758b77c0e5",
+      "sha256": "d2d751fb9bb6ba46993a7f5fd139b3e5cf637c1b690fee704bc5d105b344d123",
       "size": 223469935,
       "archivePath": "host-archives/linux-x64/dixie-host.gz",
-      "archiveSha256": "97a0f7f523290f7e48b2e6ebce6803bc15ee19fada4aa65d1e64a209543b1b71",
-      "archiveSize": 89376183
+      "archiveSha256": "13c1cad28efd6a111f85169c23bbbdbdb15ff2d6fb4156b4749f699430e48a45",
+      "archiveSize": 92546424
     },
     "linux-arm64": {
       "path": "bin/linux-arm64/dixie-host",
-      "sha256": "921cf8854ffb65e993cc87c87f0db43b9197930d71c9b7373c73615f0b579c8c",
+      "sha256": "03c0f23df92ad56605afd574fca75b56d1179344a8a5dab80d355494dfb818ff",
       "size": 253483921,
       "archivePath": "host-archives/linux-arm64/dixie-host.gz",
-      "archiveSha256": "3b15f27add5466be3671ce45b663b9f0eac247a6c2a40106fd6f88daee482634",
-      "archiveSize": 83913334
+      "archiveSha256": "2b9e012b916df69128d206b0d6575e7e580d197fba0ea37bf52e61de7200f8d0",
+      "archiveSize": 86265795
     },
     "win-x64": {
       "path": "bin/win-x64/dixie-host",
-      "sha256": "c05f6e21c3b2a17782bbf0fee896e3fa359a2c0fa1ce5adfd58eb0cc657b9477",
+      "sha256": "b8f545d9068d427d7660cbeede8ef3d01e9de7041e66e14b2579d27f4e7942b5",
       "size": 220413030,
       "archivePath": "host-archives/win-x64/dixie-host.gz",
-      "archiveSha256": "b739f4eacb2a6a5186fe618bdb2b7e5b6e398e52810840ecab1c6d00c47cc107",
-      "archiveSize": 87751430
+      "archiveSha256": "bcb25b7206a1fc016daacab3ad5d22c996202bd45308a471d0c519059b19e2f7",
+      "archiveSize": 90866160
     }
   }
 }
