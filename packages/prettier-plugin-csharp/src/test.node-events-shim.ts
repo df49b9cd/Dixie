@@ -1,25 +1,29 @@
 import events from "events";
 
-type AbortCallback = ((event: Event) => void) | (() => void);
+type AbortCallback = (event: Event) => void;
 
 const base = events as typeof events & {
   addAbortListener?: (signal: AbortSignal, listener: AbortCallback) => Disposable;
+};
+
+const createDisposable = (teardown: () => void): Disposable & { dispose: () => void } => {
+  const dispose = () => teardown();
+  return {
+    dispose,
+    [Symbol.dispose]: dispose
+  };
 };
 
 const addAbortListener =
   base.addAbortListener ??
   ((signal: AbortSignal, listener: AbortCallback): Disposable => {
     const invoke = () => {
-      (listener as (event: Event) => void)(new Event("abort"));
+      listener(new Event("abort"));
     };
 
     if (signal.aborted) {
       queueMicrotask(invoke);
-      const disposable = {
-        [Symbol.dispose]: () => {}
-      } as Disposable & { dispose?: () => void };
-      disposable.dispose = disposable[Symbol.dispose];
-      return disposable;
+      return createDisposable(() => {});
     }
 
     const abortHandler = () => {
@@ -27,26 +31,24 @@ const addAbortListener =
     };
 
     signal.addEventListener("abort", abortHandler, { once: true });
-    const disposable = {
-      [Symbol.dispose]: () => signal.removeEventListener("abort", abortHandler)
-    } as Disposable & { dispose?: () => void };
-    disposable.dispose = disposable[Symbol.dispose];
-    return disposable;
+    return createDisposable(() => signal.removeEventListener("abort", abortHandler));
   });
 
-const {
-  EventEmitter,
-  EventEmitterAsyncResource,
-  captureRejectionSymbol,
-  captureRejections,
-  defaultMaxListeners,
-  errorMonitor,
-  getEventListeners,
-  listenerCount,
-  on,
-  once,
-  setMaxListeners
-} = base;
+const EventEmitter = base.EventEmitter;
+const EventEmitterAsyncResource = base.EventEmitterAsyncResource;
+const captureRejectionSymbol = base.captureRejectionSymbol;
+const captureRejections = base.captureRejections;
+const defaultMaxListeners = base.defaultMaxListeners;
+const errorMonitor = base.errorMonitor;
+
+const getEventListeners = (...args: Parameters<typeof base.getEventListeners>) =>
+  base.getEventListeners(...args);
+const listenerCount = (...args: Parameters<typeof base.listenerCount>) =>
+  base.listenerCount(...args);
+const on = (...args: Parameters<typeof base.on>) => base.on(...args);
+const once = (...args: Parameters<typeof base.once>) => base.once(...args);
+const setMaxListeners = (...args: Parameters<typeof base.setMaxListeners>) =>
+  base.setMaxListeners(...args);
 
 export {
   EventEmitter,
