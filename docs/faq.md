@@ -20,11 +20,10 @@ Yes. Use the VS Code launch configurations under `.vscode/launch.json` to run Vi
 
 ## How do I report log output from the host?
 - Set `DIXIE_LOG_LEVEL=debug`. The host emits structured notifications (`log` command) that include context objects—these appear in the plugin when running Vitest or Prettier CLI.
-- Host binaries are verified during installation. Set `DIXIE_HOST_CACHE` to control where downloaded binaries live, or `DIXIE_HOST_PATH` to override the binary completely (useful for custom builds).
+- Host binaries are distributed separately via GitHub releases. Set `DIXIE_HOST_PATH` to point at the executable, or download the archive for your platform and place the binary under `bin/<rid>/dixie-host`. The postinstall script warns when no host is available.
 
 ## How can I verify the packaged binaries?
 
-- After `npm run build:host`, inspect `packages/prettier-plugin-csharp/manifest.json` for SHA-256 hashes and sizes.
-- During `npm install`, the `postinstall.mjs` script validates the checksum before marking the host ready.
-- Use `shasum -a 256 bin/<rid>/dixie-host` to manually validate the bundled binary matches the manifest entry.
-
+- After `npm run build:host`, inspect `packages/prettier-plugin-csharp/manifest.json` for SHA-256 hashes and sizes—these values match the GitHub release artifacts.
+- When you download a host archive from a release, extract it and run `shasum -a 256 bin/<rid>/dixie-host` (or the equivalent on Windows) to confirm it matches the manifest entry.
+- The `postinstall.mjs` script validates the checksum for binaries already on disk but does not download them automatically.

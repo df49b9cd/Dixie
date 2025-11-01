@@ -20,7 +20,7 @@ Run `npm install` followed by `dotnet restore src/Dixie.Host` to hydrate both to
 
 - Set `DIXIE_LOG_LEVEL=debug` to surface client/host debug logs.
 - Optional JSON telemetry can be enabled by exporting `DIXIE_TELEMETRY_FILE=/tmp/dixie-telemetry.log`; every format request appends a line with timings, diagnostics, and range metadata.
-- Host binaries are validated during `npm install` by `scripts/postinstall.mjs`; set `DIXIE_HOST_CACHE` to override where verified binaries are cached.
+- Host binaries are not bundled with the npm package. `scripts/postinstall.mjs` verifies manually provided binaries and warns when they are missing. Set `DIXIE_HOST_PATH` to point at a locally built host when iterating.
 - The host emits structured log notifications (level + context). When the process exceeds `DIXIE_HOST_MEMORY_BUDGET_MB` (default 512MB) a warning is logged.
 
 ## VS Code Support

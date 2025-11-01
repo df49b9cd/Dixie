@@ -30,10 +30,15 @@ See `docs/architecture.md` for detailed plans and next steps.
 
 ## Installation Notes
 
-During `npm install`, the plugin verifies the bundled host binary using `manifest.json`. Override behaviour via:
+The npm package installs without Dixie.Host binaries to stay within registry size limits. Download the archive for your platform from the Project Dixie GitHub releases page, then either:
 
-- `DIXIE_HOST_CACHE` — custom cache directory for downloaded/verified hosts.
-- `DIXIE_HOST_PATH` — explicit path to a host binary (helpful for air-gapped environments or locally built snapshots).
+- place the extracted executable at `node_modules/@df49b9cd/prettier-plugin-csharp/bin/<rid>/dixie-host`, or
+- point the plugin to the binary with the `DIXIE_HOST_PATH` environment variable.
+
+`manifest.json` records expected checksums; the postinstall script verifies the binary when present and otherwise emits guidance. Useful environment variables:
+
+- `DIXIE_HOST_PATH` — explicit path to a host binary (useful for air-gapped setups or custom builds).
+- `DIXIE_POSTINSTALL_SKIP_SMOKE` — set to `1` to skip the host smoke test during installation.
 - `DIXIE_TELEMETRY_FILE` — opt-in JSON lines log for format metrics; leave unset to disable.
 
-To ship updated binaries as part of a release run `npm run build:host`; the script refreshes `packages/prettier-plugin-csharp/bin/` and the manifest with new checksums.
+Before publishing a new release, run `npm run build:host` to refresh `packages/prettier-plugin-csharp/bin/` and `manifest.json`, then attach the binaries to the GitHub release so consumers can download them manually.

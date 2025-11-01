@@ -1,5 +1,7 @@
 {
-  "version": "0.0.1",
+  "version": "0.2.4",
+  "releasePage": "https://github.com/df49b9cd/Dixie/releases",
+  "downloadTemplate": "https://github.com/df49b9cd/Dixie/releases/download/v{version}/dixie-host-{platform}.zip",
   "binaries": {
     "osx-arm64": {
       "path": "bin/osx-arm64/dixie-host",

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { appendFileSync, existsSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
 import packageJson from "../package.json";
@@ -41,6 +41,19 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   info: 20,
   warn: 30,
   error: 40
+};
+const HOST_PLATFORM_MAP: Record<NodeJS.Platform, string | null> = {
+  aix: null,
+  android: null,
+  darwin: process.arch === "arm64" ? "osx-arm64" : "osx-x64",
+  freebsd: null,
+  haiku: null,
+  linux: process.arch === "arm64" ? "linux-arm64" : "linux-x64",
+  openbsd: null,
+  sunos: null,
+  win32: "win-x64",
+  cygwin: "win-x64",
+  netbsd: null
 };
 
 const CURRENT_LOG_LEVEL = normalizeLogLevel(process.env.DIXIE_LOG_LEVEL ?? "warn");
@@ -381,6 +394,11 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
   }
 
   const packageRoot = path.resolve(__dirname, "..");
+  const manifestSpec = resolveManifestLaunchSpec(packageRoot);
+  if (manifestSpec) {
+    return manifestSpec;
+  }
+
   const repoRoot = path.resolve(packageRoot, "..", "..");
   const configurations = ["Debug", "Release"];
   const frameworks = ["net9.0", "net8.0"];
@@ -400,6 +418,51 @@ function resolveHostLaunchSpec(): HostLaunchSpec {
   }
 
   throw new Error("Unable to locate Dixie host binary. Set DIXIE_HOST_PATH to override detection.");
+}
+
+function resolveManifestLaunchSpec(packageRoot: string): HostLaunchSpec | null {
+  const platformKey = HOST_PLATFORM_MAP[process.platform] ?? null;
+  if (!platformKey) {
+    return null;
+  }
+
+  const manifestPath = path.join(packageRoot, "manifest.json");
+  if (!existsSync(manifestPath)) {
+    return null;
+  }
+
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch {
+    return null;
+  }
+
+  if (!manifest || typeof manifest !== "object") {
+    return null;
+  }
+
+  const binaries = (manifest as { binaries?: Record<string, unknown> }).binaries;
+  if (!binaries || typeof binaries !== "object") {
+    return null;
+  }
+
+  const entry = binaries[platformKey] as { path?: unknown } | undefined;
+  const relativePath = entry && typeof entry.path === "string" ? entry.path : null;
+  if (!relativePath) {
+    return null;
+  }
+
+  const candidate = path.resolve(packageRoot, relativePath);
+  if (!existsSync(candidate)) {
+    return null;
+  }
+
+  try {
+    return createLaunchSpec(candidate);
+  } catch {
+    return null;
+  }
 }
 
 function createLaunchSpec(filePath: string): HostLaunchSpec {

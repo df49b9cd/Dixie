@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, createReadStream } from "node:fs";
-import { chmodSync } from "node:fs";
+import { existsSync, readFileSync, createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -16,6 +15,7 @@ const hostPlatformMap = {
   linux: process.arch === "arm64" ? "linux-arm64" : "linux-x64",
   win32: "win-x64"
 };
+const DEFAULT_RELEASE_PAGE = "https://github.com/project-dixie/dixie/releases";
 
 const PROTOCOL_VERSION = 1;
 const SMOKE_TEST_TIMEOUT_MS = 8_000;
@@ -33,16 +33,18 @@ async function main() {
 
   const platformKey = hostPlatformMap[process.platform];
   if (!platformKey) {
-    console.warn(`[dixie] Unsupported platform ${process.platform}; skipping host download.`);
+    console.warn(`[dixie] Unsupported platform ${process.platform}; skipping host setup.`);
     return;
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const manifest = loadManifest();
   const manifestVersion =
-    typeof manifest.version === "string" ? manifest.version : String(manifest.version ?? "0.0.0");
-  const entry = manifest.binaries?.[platformKey];
+    typeof manifest?.version === "string" ? manifest.version : String(manifest?.version ?? "0.0.0");
+  const entry = manifest?.binaries?.[platformKey];
   if (!entry) {
-    console.warn(`[dixie] No manifest entry for ${platformKey}; install the host manually (set DIXIE_HOST_PATH).`);
+    console.warn(
+      `[dixie] No manifest entry for ${platformKey}. Install the host manually and set DIXIE_HOST_PATH if needed.`
+    );
     return;
   }
 
@@ -54,46 +56,20 @@ async function main() {
     hostReady = true;
   }
 
-  if (!smokeOnly) {
-    const cacheHome = path.join(
-      process.env.DIXIE_HOST_CACHE ?? path.join(process.env.HOME ?? process.cwd(), ".cache/dixie"),
-      manifestVersion,
-      platformKey
+  if (!hostReady && !smokeOnly) {
+    const guidance = buildDownloadHint(manifest, entry, platformKey, manifestVersion);
+    console.warn(
+      `[dixie] Host binary missing for ${platformKey}. Download it from ${guidance} and place it at ${hostPath}, or set DIXIE_HOST_PATH to a valid executable.`
     );
-    const cachedPath = path.join(cacheHome, path.basename(entry.path));
+    console.warn("[dixie] Postinstall smoke test skipped because the host binary is unavailable.");
+    return;
+  }
 
-    if (!hostReady) {
-      if (await verifyChecksum(cachedPath, entry.sha256)) {
-        copyFile(cachedPath, hostPath);
-        hostReady = await verifyChecksum(hostPath, entry.sha256);
-      } else {
-        if (!entry.url) {
-          console.warn(
-            `[dixie] Host binary is missing and manifest lacks download url. Run npm run build:host.`
-          );
-          return;
-        }
-
-        mkdirSync(cacheHome, { recursive: true });
-        console.log(`[dixie] Downloading host from ${entry.url}`);
-        const { stdout } = await execa("curl", ["-sSL", entry.url, "-o", cachedPath]);
-        if (stdout) {
-          console.log(stdout);
-        }
-
-        if (!(await verifyChecksum(cachedPath, entry.sha256))) {
-          throw new Error(`[dixie] Downloaded binary failed checksum for ${platformKey}.`);
-        }
-
-        copyFile(cachedPath, hostPath);
-        hostReady = await verifyChecksum(hostPath, entry.sha256);
-      }
-    }
-  } else {
+  if (smokeOnly) {
     hostReady = existsSync(hostPath);
     if (!hostReady) {
       throw new Error(
-        `[dixie] --smoke-only requested but host binary not found at ${hostPath}. Run npm run build:host.`
+        `[dixie] --smoke-only requested but host binary not found at ${hostPath}. Download the host from the release package or build it locally.`
       );
     }
   }
@@ -119,14 +95,6 @@ async function verifyChecksum(filePath, expected) {
   await pipeline(createReadStream(filePath), hash);
   const digest = hash.digest("hex");
   return digest === expected;
-}
-
-function copyFile(src, dest) {
-  mkdirSync(path.dirname(dest), { recursive: true });
-  const data = readFileSync(src);
-  writeFileSync(dest, data, { mode: 0o755 });
-  chmodSync(dest, 0o755);
-  console.log(`[dixie] Host ready at ${dest}`);
 }
 
 async function runSmokeTest(hostPath, manifestVersion, platformKey) {
@@ -381,6 +349,46 @@ function extractFrame(buffer) {
 
   const remaining = buffer.slice(totalLength);
   return { envelope, buffer: remaining };
+}
+
+function loadManifest() {
+  if (!existsSync(manifestPath)) {
+    console.warn(
+      `[dixie] Manifest file not found at ${manifestPath}; host binaries must be provided manually.`
+    );
+    return null;
+  }
+
+  try {
+    return JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[dixie] Failed to parse manifest.json: ${message}`);
+    return null;
+  }
+}
+
+function buildDownloadHint(manifest, entry, platformKey, manifestVersion) {
+  if (entry && typeof entry.url === "string" && entry.url.length > 0) {
+    return entry.url;
+  }
+
+  if (
+    manifest &&
+    typeof manifest.downloadTemplate === "string" &&
+    manifest.downloadTemplate.includes("{platform}") &&
+    manifest.downloadTemplate.includes("{version}")
+  ) {
+    return manifest.downloadTemplate
+      .replaceAll("{platform}", platformKey)
+      .replaceAll("{version}", manifestVersion);
+  }
+
+  if (manifest && typeof manifest.releasePage === "string" && manifest.releasePage.length > 0) {
+    return manifest.releasePage;
+  }
+
+  return DEFAULT_RELEASE_PAGE;
 }
 
 main().catch((error) => {

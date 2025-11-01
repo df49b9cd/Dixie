@@ -7,12 +7,12 @@
 
 ## Steps
 
-1. Run `npm run build:host` to produce self-contained binaries and refresh `manifest.json`.
-2. Update `manifest.json` (coming milestone) with new SHA-256 values.
+1. Run `npm run build:host` to produce self-contained binaries for every RID (outputs land in `artifacts/<rid>`).
+2. Refresh `packages/prettier-plugin-csharp/manifest.json` with the new version, sizes, and SHA-256 hashes.
 3. Bump version numbers in `package.json` and `packages/prettier-plugin-csharp/package.json` (use `npm version`).
 4. Commit and tag: `git commit -am "chore(release): vX.Y.Z" && git tag vX.Y.Z`.
-5. Publish npm package from a clean tree: `npm publish`.
-6. Create a GitHub release attaching host artifacts generated in step 1.
+5. Create a GitHub release for `vX.Y.Z` and upload the zipped host artifacts from step 1.
+6. Publish the npm package from a clean tree: `npm publish`.
 
 ## CI Integration (future work)
 
