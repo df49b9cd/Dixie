@@ -2,14 +2,23 @@
   "name": "@df49b9cd/prettier-plugin-csharp",
   "version": "0.3.1",
   "description": "Prettier plugin for C# powered by Roslyn",
-  "main": "dist/index.cjs",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "commonjs",
   "files": [
-    "dist"
+    "dist",
+    "manifest.json",
+    "scripts/postinstall.mjs"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
   "engines": {
-    "node": ">=22.21.0"
+    "node": ">=18.18.0"
   },
   "scripts": {
     "pretest": "dotnet build ../../src/Dixie.Host/Dixie.Host.csproj -c Debug",
